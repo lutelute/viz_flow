@@ -1,192 +1,248 @@
-import type { FlowDefinition } from '../core/types';
+import type { FlowDefinition, FlowNode, FlowEdge, FlowZone } from '../core/types';
+import { autoLayout } from '../core/layout';
 
-// ── 共通カラー ──
 const C = {
-  doc: '#6366f1',
-  embed: '#8b5cf6',
-  vecdb: '#06b6d4',
-  query: '#10b981',
-  llm: '#ec4899',
-  search: '#f59e0b',
-  out: '#10b981',
-  check: '#ef4444',
-  agent: '#f97316',
-  graph: '#14b8a6',
+  base: '#94a3b8',
+  hi1: '#6366f1', hi2: '#ec4899', hi3: '#f59e0b',
+  hi4: '#10b981', hi5: '#ef4444', hi6: '#14b8a6', hi7: '#f97316',
 };
 
-/** 1. Naive RAG */
+const W = 440;
+const H = 260;
+// タイトル領域: y=0〜55, ノード領域: y=55〜H-10
+const BBOX = { x: 20, y: 60, width: W - 40, height: H - 75 };
+
+/** ノード定義(座標なし) → autoLayout で座標を自動計算 → FlowNode[] を返す */
+function applyLayout(
+  defs: Omit<FlowNode, 'x' | 'y'>[],
+  edges: FlowEdge[],
+): FlowNode[] {
+  const ids = defs.map(d => d.id);
+  const layoutEdges = edges.map(e => ({ from: e.from, to: e.to }));
+  const positions = autoLayout(ids, layoutEdges, BBOX);
+  return defs.map(d => {
+    const pos = positions.get(d.id) ?? { x: BBOX.x + BBOX.width / 2, y: BBOX.y + BBOX.height / 2 };
+    return { ...d, x: Math.round(pos.x), y: Math.round(pos.y) } as FlowNode;
+  });
+}
+
+function cfg(title: string, sub: string): FlowDefinition['config'] {
+  return { title, subtitle: sub, width: W, height: H, theme: 'light', animationSpeed: 1, showLabels: true };
+}
+
+// ── 共通ベースノード（座標なし）──
+function baseNodeDefs(): Omit<FlowNode, 'x' | 'y'>[] {
+  return [
+    { id: 'query',  label: 'Query',  icon: 'user',     color: C.base, width: 24, muted: true },
+    { id: 'llm',    label: 'LLM',    icon: 'sparkles', color: C.base, width: 26, muted: true },
+    { id: 'output', label: 'Output', icon: 'mail',     color: C.base, width: 20, muted: true },
+  ];
+}
+
+function baseEdge(): FlowEdge {
+  return { id: 'c1', from: 'llm', to: 'output', delay: 6 };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1. Naive RAG — 直線、全ノードカラー
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const naiveNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  { id: 'query',  label: 'Query',     icon: 'user',     color: C.hi1, width: 24 },
+  { id: 'embed',  label: 'Embed',     icon: 'cpu',      color: C.hi1, width: 22 },
+  { id: 'vecdb',  label: 'Vector DB', icon: 'database', color: C.hi1, width: 24 },
+  { id: 'llm',    label: 'LLM',       icon: 'sparkles', color: C.hi1, width: 26 },
+  { id: 'output', label: 'Output',    icon: 'mail',     color: C.hi1, width: 20 },
+];
+const naiveEdges: FlowEdge[] = [
+  { id: 'e1', from: 'query', to: 'embed', delay: 0 },
+  { id: 'e2', from: 'embed', to: 'vecdb', delay: 1.5 },
+  { id: 'e3', from: 'vecdb', to: 'llm',   delay: 3 },
+  { id: 'e5', from: 'llm',   to: 'output', delay: 5 },
+];
 export const naiveRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 120, icon: 'user', color: C.query, width: 30 },
-    { id: 'e', label: 'Embedding', x: 220, y: 120, icon: 'cpu', color: C.embed, width: 28 },
-    { id: 'db', label: 'Vector DB', x: 360, y: 120, icon: 'database', color: C.vecdb, width: 30 },
-    { id: 'llm', label: 'LLM', x: 220, y: 250, icon: 'sparkles', color: C.llm, width: 32 },
-    { id: 'out', label: 'Output', x: 360, y: 250, icon: 'mail', color: C.out, width: 28 },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'e', particleCount: 1 },
-    { id: 'e2', from: 'e', to: 'db', particleCount: 1 },
-    { id: 'e3', from: 'db', to: 'llm', label: 'chunks', particleCount: 1 },
-    { id: 'e4', from: 'q', to: 'llm', dashed: true, particleCount: 1, speed: 0.6 },
-    { id: 'e5', from: 'llm', to: 'out', particleCount: 1 },
-  ],
-  config: { title: 'Naive RAG', width: 440, height: 330, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(naiveNodeDefs, naiveEdges),
+  edges: naiveEdges,
+  config: cfg('Naive RAG', 'Linear — the baseline'),
 };
 
-/** 2. Multimodal RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 2. Multimodal RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const multiNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'text',  label: 'Text',  icon: 'file-input', color: C.hi1, width: 20 },
+  { id: 'img',   label: 'Image', icon: 'eye',        color: C.hi2, width: 20 },
+  { id: 'embed', label: 'Embed', icon: 'cpu',        color: C.hi1, width: 22 },
+  { id: 'vecdb', label: 'VecDB', icon: 'database',   color: C.base, width: 22, muted: true },
+];
+const multiEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'text',  to: 'embed', delay: 0, color: C.hi1 },
+  { id: 'h2', from: 'img',   to: 'embed', delay: 0.3, color: C.hi2 },
+  { id: 'h3', from: 'embed', to: 'vecdb', delay: 1.5 },
+  { id: 'h4', from: 'vecdb', to: 'llm',   delay: 3 },
+  { id: 'h5', from: 'query', to: 'llm',   delay: 0.5, dashed: true },
+];
 export const multimodalRag: FlowDefinition = {
-  nodes: [
-    { id: 'txt', label: 'Text', x: 80, y: 80, icon: 'file-input', color: C.doc, width: 28 },
-    { id: 'img', label: 'Image', x: 80, y: 180, icon: 'eye', color: C.agent, width: 28 },
-    { id: 'e', label: 'Embedding', x: 220, y: 130, icon: 'cpu', color: C.embed, width: 28 },
-    { id: 'db', label: 'Vector DB', x: 360, y: 130, icon: 'database', color: C.vecdb, width: 30 },
-    { id: 'llm', label: 'LLM', x: 280, y: 260, icon: 'sparkles', color: C.llm, width: 32 },
-    { id: 'out', label: 'Output', x: 400, y: 260, icon: 'mail', color: C.out, width: 28 },
-  ],
-  edges: [
-    { id: 'e1', from: 'txt', to: 'e', particleCount: 1 },
-    { id: 'e2', from: 'img', to: 'e', particleCount: 1 },
-    { id: 'e3', from: 'e', to: 'db', particleCount: 1 },
-    { id: 'e4', from: 'db', to: 'llm', particleCount: 1 },
-    { id: 'e5', from: 'llm', to: 'out', particleCount: 1 },
-  ],
-  config: { title: 'Multimodal RAG', width: 480, height: 340, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(multiNodeDefs, multiEdges),
+  edges: multiEdges,
+  config: cfg('Multimodal RAG', '+ multi-modal input'),
 };
 
-/** 3. HyDE (Hypothetical Document Embedding) */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 3. HyDE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const hydeNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'hypo',  label: 'Hypothesis', icon: 'lightbulb', color: C.hi3, width: 22 },
+  { id: 'embed', label: 'Embed',      icon: 'cpu',       color: C.base, width: 20, muted: true },
+  { id: 'vecdb', label: 'VecDB',      icon: 'database',  color: C.base, width: 22, muted: true },
+];
+const hydeEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query', to: 'hypo',  delay: 0, color: C.hi3 },
+  { id: 'h2', from: 'hypo',  to: 'embed', delay: 1.5, color: C.hi3 },
+  { id: 'h3', from: 'embed', to: 'vecdb', delay: 3 },
+  { id: 'h4', from: 'vecdb', to: 'llm',   delay: 4.5 },
+];
 export const hydeRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 140, icon: 'user', color: C.query, width: 30 },
-    { id: 'llm1', label: 'LLM', x: 220, y: 140, icon: 'sparkles', color: C.llm, width: 30, description: 'Hypothetical doc' },
-    { id: 'e', label: 'Embedding', x: 360, y: 140, icon: 'cpu', color: C.embed, width: 28 },
-    { id: 'db', label: 'Vector DB', x: 500, y: 140, icon: 'database', color: C.vecdb, width: 30 },
-    { id: 'llm2', label: 'LLM', x: 360, y: 270, icon: 'sparkles', color: C.llm, width: 32, description: 'Final answer' },
-    { id: 'out', label: 'Response', x: 500, y: 270, icon: 'mail', color: C.out, width: 28 },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'llm1', particleCount: 1 },
-    { id: 'e2', from: 'llm1', to: 'e', particleCount: 1, particleState: { color: C.llm, icon: 'file-input', size: 12 } },
-    { id: 'e3', from: 'e', to: 'db', particleCount: 1 },
-    { id: 'e4', from: 'db', to: 'llm2', particleCount: 1 },
-    { id: 'e5', from: 'q', to: 'llm2', dashed: true, particleCount: 1, speed: 0.5 },
-    { id: 'e6', from: 'llm2', to: 'out', particleCount: 1 },
-  ],
-  config: { title: 'HyDE RAG', width: 580, height: 350, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(hydeNodeDefs, hydeEdges),
+  edges: hydeEdges,
+  config: cfg('HyDE RAG', '+ hypothetical doc before embed'),
 };
 
-/** 4. Corrective RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 4. Corrective RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const corrNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'embed', label: 'Embed', icon: 'cpu',      color: C.base, width: 20, muted: true },
+  { id: 'vecdb', label: 'VecDB', icon: 'database', color: C.base, width: 22, muted: true },
+  { id: 'eval',  label: 'Check', icon: 'target',   color: C.hi5, width: 22 },
+  { id: 'web',   label: 'Web',   icon: 'globe',    color: C.hi3, width: 20 },
+];
+const corrEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query', to: 'embed', delay: 0 },
+  { id: 'h2', from: 'embed', to: 'vecdb', delay: 1.5 },
+  { id: 'h3', from: 'vecdb', to: 'eval',  delay: 3, color: C.hi5 },
+  { id: 'h4', from: 'eval',  to: 'llm',   delay: 4.5, color: C.hi4 },
+  { id: 'h5', from: 'eval',  to: 'web',   delay: 4.5, color: C.hi5, dashed: true },
+  { id: 'h6', from: 'web',   to: 'llm',   delay: 5.5, color: C.hi3 },
+];
 export const correctiveRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 100, icon: 'user', color: C.query, width: 30 },
-    { id: 'db', label: 'Vector DB', x: 240, y: 100, icon: 'database', color: C.vecdb, width: 30 },
-    { id: 'eval', label: 'Evaluate', x: 400, y: 100, icon: 'target', color: C.check, width: 30, description: 'Relevance check' },
-    { id: 'web', label: 'Web Search', x: 400, y: 240, icon: 'globe', color: C.search, width: 30, description: 'Fallback' },
-    { id: 'llm', label: 'LLM', x: 240, y: 240, icon: 'sparkles', color: C.llm, width: 32 },
-    { id: 'out', label: 'Output', x: 80, y: 240, icon: 'mail', color: C.out, width: 28 },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'db', particleCount: 1 },
-    { id: 'e2', from: 'db', to: 'eval', particleCount: 1 },
-    { id: 'e3', from: 'eval', to: 'llm', label: 'pass', particleCount: 1 },
-    { id: 'e4', from: 'eval', to: 'web', label: 'fail', dashed: true, particleCount: 1, speed: 0.6 },
-    { id: 'e5', from: 'web', to: 'llm', particleCount: 1 },
-    { id: 'e6', from: 'llm', to: 'out', particleCount: 1 },
-  ],
-  config: { title: 'Corrective RAG', width: 480, height: 330, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(corrNodeDefs, corrEdges),
+  edges: corrEdges,
+  config: cfg('Corrective RAG', '+ relevance check → fallback'),
 };
 
-/** 5. Graph RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 5. Graph RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const graphNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'extract',  label: 'Extract',  icon: 'search',  color: C.hi6, width: 20 },
+  { id: 'kg',       label: 'GraphDB',  icon: 'git',     color: C.hi6, width: 24 },
+  { id: 'traverse', label: 'Traverse', icon: 'shuffle', color: C.hi6, width: 20 },
+];
+const graphEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query',    to: 'extract',  delay: 0, color: C.hi6 },
+  { id: 'h2', from: 'extract',  to: 'kg',       delay: 1.5, color: C.hi6 },
+  { id: 'h3', from: 'query',    to: 'traverse',  delay: 0.5, dashed: true },
+  { id: 'h4', from: 'kg',       to: 'traverse',  delay: 3, color: C.hi6 },
+  { id: 'h5', from: 'traverse', to: 'llm',       delay: 4.5, color: C.hi6 },
+];
 export const graphRag: FlowDefinition = {
-  nodes: [
-    { id: 'doc', label: 'Documents', x: 80, y: 100, icon: 'layers', color: C.doc, width: 30 },
-    { id: 'extract', label: 'Entity Extract', x: 240, y: 100, icon: 'search', color: C.embed, width: 28 },
-    { id: 'kg', label: 'Knowledge Graph', x: 400, y: 100, icon: 'git', color: C.graph, width: 34, description: 'Graph DB' },
-    { id: 'q', label: 'Query', x: 80, y: 260, icon: 'user', color: C.query, width: 30 },
-    { id: 'traverse', label: 'Graph Traverse', x: 240, y: 260, icon: 'shuffle', color: C.graph, width: 30 },
-    { id: 'llm', label: 'LLM', x: 400, y: 260, icon: 'sparkles', color: C.llm, width: 32 },
-  ],
-  edges: [
-    { id: 'e1', from: 'doc', to: 'extract', particleCount: 1 },
-    { id: 'e2', from: 'extract', to: 'kg', particleCount: 1 },
-    { id: 'e3', from: 'q', to: 'traverse', particleCount: 1 },
-    { id: 'e4', from: 'kg', to: 'traverse', particleCount: 1, speed: 0.7 },
-    { id: 'e5', from: 'traverse', to: 'llm', particleCount: 1, particleState: { color: C.graph, icon: 'git', size: 14 } },
-  ],
-  config: { title: 'Graph RAG', width: 480, height: 340, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(graphNodeDefs, graphEdges),
+  edges: graphEdges,
+  config: cfg('Graph RAG', '+ knowledge graph traversal'),
 };
 
-/** 6. Hybrid RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 6. Hybrid RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const hybridNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'dense',  label: 'Dense',   icon: 'database', color: C.hi1, width: 20 },
+  { id: 'sparse', label: 'Sparse',  icon: 'search',   color: C.hi3, width: 20 },
+  { id: 'rerank', label: 'Re-rank', icon: 'filter',   color: C.hi2, width: 22 },
+];
+const hybridEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query',  to: 'dense',  delay: 0, color: C.hi1 },
+  { id: 'h2', from: 'query',  to: 'sparse', delay: 0, color: C.hi3 },
+  { id: 'h3', from: 'dense',  to: 'rerank', delay: 1.5, color: C.hi1 },
+  { id: 'h4', from: 'sparse', to: 'rerank', delay: 1.5, color: C.hi3 },
+  { id: 'h5', from: 'rerank', to: 'llm',    delay: 3, color: C.hi2 },
+];
 export const hybridRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 170, icon: 'user', color: C.query, width: 30 },
-    { id: 'dense', label: 'Dense Search', x: 260, y: 90, icon: 'database', color: C.vecdb, width: 28, description: 'Semantic' },
-    { id: 'sparse', label: 'Sparse Search', x: 260, y: 250, icon: 'search', color: C.search, width: 28, description: 'BM25' },
-    { id: 'rerank', label: 'Re-rank', x: 420, y: 170, icon: 'filter', color: C.embed, width: 30, description: 'Cross-encoder' },
-    { id: 'llm', label: 'LLM', x: 560, y: 170, icon: 'sparkles', color: C.llm, width: 32 },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'dense', particleCount: 1 },
-    { id: 'e2', from: 'q', to: 'sparse', particleCount: 1 },
-    { id: 'e3', from: 'dense', to: 'rerank', particleCount: 1 },
-    { id: 'e4', from: 'sparse', to: 'rerank', particleCount: 1 },
-    { id: 'e5', from: 'rerank', to: 'llm', particleCount: 1 },
-  ],
-  config: { title: 'Hybrid RAG', width: 640, height: 340, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(hybridNodeDefs, hybridEdges),
+  edges: hybridEdges,
+  config: cfg('Hybrid RAG', '+ dense + sparse → re-rank'),
 };
 
-/** 7. Adaptive RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 7. Adaptive RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const adaptNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'router', label: 'Router', icon: 'shuffle',  color: C.hi7, width: 22 },
+  { id: 'rag',    label: 'RAG',    icon: 'database', color: C.base, width: 18, muted: true },
+  { id: 'web',    label: 'Web',    icon: 'globe',    color: C.hi3, width: 18 },
+  { id: 'direct', label: 'Direct', icon: 'zap',      color: C.hi7, width: 18 },
+];
+const adaptEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query',  to: 'router', delay: 0, color: C.hi7 },
+  { id: 'h2', from: 'router', to: 'rag',    delay: 1.5 },
+  { id: 'h3', from: 'router', to: 'web',    delay: 1.5, color: C.hi3 },
+  { id: 'h4', from: 'router', to: 'direct', delay: 1.5, color: C.hi7 },
+  { id: 'h5', from: 'rag',    to: 'llm',    delay: 3 },
+  { id: 'h6', from: 'web',    to: 'llm',    delay: 3, color: C.hi3 },
+  { id: 'h7', from: 'direct', to: 'llm',    delay: 3, color: C.hi7 },
+];
 export const adaptiveRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 160, icon: 'user', color: C.query, width: 30 },
-    { id: 'router', label: 'Router', x: 230, y: 160, icon: 'shuffle', color: C.agent, width: 30, description: 'Classify query' },
-    { id: 'simple', label: 'Simple RAG', x: 400, y: 70, icon: 'database', color: C.vecdb, width: 28 },
-    { id: 'multi', label: 'Multi-step', x: 400, y: 160, icon: 'layers', color: C.embed, width: 28 },
-    { id: 'web', label: 'Web Search', x: 400, y: 250, icon: 'globe', color: C.search, width: 28 },
-    { id: 'llm', label: 'LLM', x: 540, y: 160, icon: 'sparkles', color: C.llm, width: 32 },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'router', particleCount: 1 },
-    { id: 'e2', from: 'router', to: 'simple', label: 'easy', particleCount: 1 },
-    { id: 'e3', from: 'router', to: 'multi', label: 'complex', particleCount: 1 },
-    { id: 'e4', from: 'router', to: 'web', label: 'recent', particleCount: 1 },
-    { id: 'e5', from: 'simple', to: 'llm', particleCount: 1 },
-    { id: 'e6', from: 'multi', to: 'llm', particleCount: 1 },
-    { id: 'e7', from: 'web', to: 'llm', particleCount: 1 },
-  ],
-  config: { title: 'Adaptive RAG', width: 620, height: 330, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(adaptNodeDefs, adaptEdges),
+  edges: adaptEdges,
+  config: cfg('Adaptive RAG', '+ router → multiple paths'),
 };
 
-/** 8. Agentic RAG */
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 8. Agentic RAG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const agentNodeDefs: Omit<FlowNode, 'x' | 'y'>[] = [
+  ...baseNodeDefs(),
+  { id: 'planner', label: 'Plan',  icon: 'lightbulb', color: C.hi7, width: 22 },
+  { id: 'tool1',   label: 'RAG',   icon: 'search',    color: C.hi1, width: 18 },
+  { id: 'tool2',   label: 'Web',   icon: 'globe',     color: C.hi3, width: 18 },
+  { id: 'tool3',   label: 'Code',  icon: 'code',      color: C.hi6, width: 18 },
+  { id: 'merge',   label: 'Merge', icon: 'layers',    color: C.hi7, width: 18 },
+];
+const agentEdges: FlowEdge[] = [
+  baseEdge(),
+  { id: 'h1', from: 'query',   to: 'planner', delay: 0, color: C.hi7 },
+  { id: 'h2', from: 'planner', to: 'tool1',   delay: 1.5, color: C.hi1 },
+  { id: 'h3', from: 'planner', to: 'tool2',   delay: 1.5, color: C.hi3 },
+  { id: 'h4', from: 'planner', to: 'tool3',   delay: 1.5, color: C.hi6 },
+  { id: 'h5', from: 'tool1',   to: 'merge',   delay: 3, color: C.hi1 },
+  { id: 'h6', from: 'tool2',   to: 'merge',   delay: 3, color: C.hi3 },
+  { id: 'h7', from: 'tool3',   to: 'merge',   delay: 3, color: C.hi6 },
+  { id: 'h8', from: 'merge',   to: 'llm',     delay: 4.5, color: C.hi7 },
+];
 export const agenticRag: FlowDefinition = {
-  nodes: [
-    { id: 'q', label: 'Query', x: 80, y: 160, icon: 'user', color: C.query, width: 30 },
-    { id: 'planner', label: 'Planner', x: 230, y: 80, icon: 'lightbulb', color: C.agent, width: 30, description: 'Decompose' },
-    { id: 'agent1', label: 'Agent 1', x: 400, y: 60, icon: 'search', color: C.search, width: 28, description: 'RAG tool' },
-    { id: 'agent2', label: 'Agent 2', x: 400, y: 160, icon: 'globe', color: C.vecdb, width: 28, description: 'Web tool' },
-    { id: 'agent3', label: 'Agent 3', x: 400, y: 260, icon: 'code', color: C.embed, width: 28, description: 'Code tool' },
-    { id: 'merge', label: 'Merge', x: 540, y: 160, icon: 'layers', color: C.agent, width: 28 },
-    { id: 'llm', label: 'LLM', x: 230, y: 260, icon: 'sparkles', color: C.llm, width: 32, description: 'Final synthesis' },
-  ],
-  edges: [
-    { id: 'e1', from: 'q', to: 'planner', particleCount: 1 },
-    { id: 'e2', from: 'planner', to: 'agent1', particleCount: 1 },
-    { id: 'e3', from: 'planner', to: 'agent2', particleCount: 1 },
-    { id: 'e4', from: 'planner', to: 'agent3', particleCount: 1 },
-    { id: 'e5', from: 'agent1', to: 'merge', particleCount: 1 },
-    { id: 'e6', from: 'agent2', to: 'merge', particleCount: 1 },
-    { id: 'e7', from: 'agent3', to: 'merge', particleCount: 1 },
-    { id: 'e8', from: 'merge', to: 'llm', particleCount: 1, particleState: { color: C.agent, icon: 'layers', size: 14 } },
-  ],
-  config: { title: 'Agentic RAG', width: 620, height: 340, theme: 'light', animationSpeed: 1, showLabels: true },
+  nodes: applyLayout(agentNodeDefs, agentEdges),
+  edges: agentEdges,
+  config: cfg('Agentic RAG', '+ planner + tools'),
 };
 
 export const ragArchitectures = [
-  { name: 'Naive RAG', key: 'naive-rag', flow: naiveRag },
-  { name: 'Multimodal RAG', key: 'multimodal-rag', flow: multimodalRag },
-  { name: 'HyDE RAG', key: 'hyde-rag', flow: hydeRag },
-  { name: 'Corrective RAG', key: 'corrective-rag', flow: correctiveRag },
-  { name: 'Graph RAG', key: 'graph-rag', flow: graphRag },
-  { name: 'Hybrid RAG', key: 'hybrid-rag', flow: hybridRag },
-  { name: 'Adaptive RAG', key: 'adaptive-rag', flow: adaptiveRag },
-  { name: 'Agentic RAG', key: 'agentic-rag', flow: agenticRag },
+  { name: 'Naive',      key: 'naive-rag',      flow: naiveRag },
+  { name: 'Multimodal', key: 'multimodal-rag', flow: multimodalRag },
+  { name: 'HyDE',       key: 'hyde-rag',       flow: hydeRag },
+  { name: 'Corrective', key: 'corrective-rag', flow: correctiveRag },
+  { name: 'Graph',      key: 'graph-rag',      flow: graphRag },
+  { name: 'Hybrid',     key: 'hybrid-rag',     flow: hybridRag },
+  { name: 'Adaptive',   key: 'adaptive-rag',   flow: adaptiveRag },
+  { name: 'Agentic',    key: 'agentic-rag',    flow: agenticRag },
 ];

@@ -15,14 +15,42 @@
   transition: background 0.4s ease;
 }
 
+/* ── Controls ── */
+
 .controls {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 20px 16px 8px;
+  padding: 16px 16px 6px;
   width: 100%;
-  max-width: 720px;
+  max-width: 900px;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.08);
+  margin-bottom: 4px;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+  font-weight: 700;
+  background: rgba(0,0,0,0.04);
 }
 
 .template-tabs,
@@ -37,8 +65,8 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  padding: 6px 14px;
-  font-size: 13px;
+  padding: 5px 12px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -62,17 +90,69 @@
   letter-spacing: 0.02em;
 }
 
+/* ── Canvas ── */
+
 .canvas-container {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 12px;
+  padding: 8px 12px 24px;
+  width: 100%;
 }
 
-.info {
-  padding: 12px;
-  font-size: 11px;
+/* ── Grid Compare ── */
+
+.grid-wrapper {
   text-align: center;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.grid-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.grid-subtitle {
+  font-size: 13px;
+  margin: 4px 0 16px;
+  font-weight: 400;
   letter-spacing: 0.01em;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.comparison-card {
+  position: relative;
+  border: 1px solid;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 1200px) {
+  .comparison-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
 }

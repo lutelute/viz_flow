@@ -3,7 +3,9 @@ import type { FlowDefinition } from '../core/types';
 import { themes } from '../core/themes';
 import { computePath } from '../core/path';
 import { FlowNodeComponent } from './FlowNode';
+import { FlowZoneComponent } from './FlowZone';
 import { AnimatedEdge } from './AnimatedEdge';
+import { ArrivalPulse } from './ArrivalPulse';
 import './FlowCanvas.css';
 
 interface Props {
@@ -13,6 +15,8 @@ interface Props {
 export function FlowCanvas({ flow }: Props) {
   const { nodes, edges, config } = flow;
   const theme = themes[config.theme ?? 'light'];
+  const speed = config.animationSpeed ?? 1;
+  const cycleDur = 8 / speed;
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, (typeof nodes)[0]>();
@@ -30,6 +34,22 @@ export function FlowCanvas({ flow }: Props) {
       })
       .filter(Boolean) as { edge: (typeof edges)[0]; path: string }[];
   }, [edges, nodeMap]);
+
+  // 最後のエッジ（delay最大）の到着先にパルス
+  const lastEdge = useMemo(() => {
+    let maxDelay = -1;
+    let last = edges[0];
+    for (const e of edges) {
+      if ((e.delay ?? 0) > maxDelay) {
+        maxDelay = e.delay ?? 0;
+        last = e;
+      }
+    }
+    return last;
+  }, [edges]);
+
+  const lastNode = nodeMap.get(lastEdge?.to ?? '');
+  const lastDelay = (lastEdge?.delay ?? 0) + 2 / ((lastEdge?.speed ?? 1) * speed);
 
   return (
     <div
@@ -66,16 +86,23 @@ export function FlowCanvas({ flow }: Props) {
           </filter>
         </defs>
 
+        {/* ゾーン（最背面） */}
+        {flow.zones?.map((zone) => (
+          <FlowZoneComponent key={zone.id} zone={zone} theme={theme} />
+        ))}
+
+        {/* エッジ */}
         {edgePaths.map(({ edge, path }) => (
           <AnimatedEdge
             key={edge.id}
             edge={edge}
             path={path}
             theme={theme}
-            speed={config.animationSpeed ?? 1}
+            speed={speed}
           />
         ))}
 
+        {/* ノード */}
         {nodes.map((node, i) => (
           <FlowNodeComponent
             key={node.id}
@@ -87,6 +114,17 @@ export function FlowCanvas({ flow }: Props) {
             showLabel={config.showLabels !== false}
           />
         ))}
+
+        {/* 到着パルス（最後のノード） */}
+        {lastNode && (
+          <ArrivalPulse
+            x={lastNode.x}
+            y={lastNode.y}
+            color={lastNode.color ?? theme.accentColors[0]}
+            delay={lastDelay}
+            cycleDur={cycleDur}
+          />
+        )}
       </svg>
     </div>
   );

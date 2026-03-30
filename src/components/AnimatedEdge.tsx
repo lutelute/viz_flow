@@ -10,20 +10,19 @@ interface Props {
   speed: number;
 }
 
-/**
- * n8n風のエッジ + 光の玉アニメーション
- * - 矢印付きの直線パス
- * - パーティクルはノード間を移動、状態変化可能
- */
 export function AnimatedEdge({ edge, path, theme, speed }: Props) {
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
-  const particleCount = edge.particleCount ?? 1;
   const edgeColor = edge.color ?? theme.edgeColor;
-  const duration = 2.5 / ((edge.speed ?? 1) * speed);
   const showArrow = edge.arrow !== false;
   const markerId = `arrow-${edge.id}`;
   const ps = edge.particleState;
+
+  const travelDur = 1.5 / ((edge.speed ?? 1) * speed);
+  const cycleDur = 8 / speed;
+  const delay = edge.delay ?? 0;
+  // パス上の移動比率（サイクル全体に対する）
+  const tr = travelDur / cycleDur;
 
   useEffect(() => {
     if (pathRef.current) {
@@ -31,23 +30,13 @@ export function AnimatedEdge({ edge, path, theme, speed }: Props) {
     }
   }, [path]);
 
-  const particles = Array.from({ length: particleCount }, (_, i) => ({
-    id: i,
-    offset: i / particleCount,
-  }));
-
   return (
     <g>
-      {/* 矢印マーカー */}
       {showArrow && (
         <defs>
           <marker
-            id={markerId}
-            viewBox="0 0 10 8"
-            refX="10"
-            refY="4"
-            markerWidth="8"
-            markerHeight="6"
+            id={markerId} viewBox="0 0 10 8"
+            refX="10" refY="4" markerWidth="8" markerHeight="6"
             orient="auto-start-reverse"
           >
             <path d="M 0 0 L 10 4 L 0 8 Z" fill={edgeColor} />
@@ -55,116 +44,74 @@ export function AnimatedEdge({ edge, path, theme, speed }: Props) {
         </defs>
       )}
 
-      {/* エッジライン */}
       <path
-        d={path}
-        fill="none"
-        stroke={edgeColor}
+        d={path} fill="none" stroke={edgeColor}
         strokeWidth={1.8}
         strokeDasharray={edge.dashed ? '6 4' : undefined}
         strokeLinecap="round"
         markerEnd={showArrow ? `url(#${markerId})` : undefined}
-        opacity={0.6}
+        opacity={0.5}
       />
 
-      {/* パス長計測用 */}
       <path ref={pathRef} d={path} fill="none" stroke="transparent" strokeWidth={0} />
 
-      {/* エッジラベル */}
       {edge.label && (
         <>
-          <defs>
-            <path id={`epath-${edge.id}`} d={path} />
-          </defs>
+          <defs><path id={`ep-${edge.id}`} d={path} /></defs>
           {pathLength > 0 && (
-            <text
-              dy={-8}
-              fill={theme.subtextColor}
-              fontSize={10}
-              fontWeight={500}
-              fontFamily="system-ui, sans-serif"
-              textAnchor="middle"
-            >
-              <textPath href={`#epath-${edge.id}`} startOffset="50%">
-                {edge.label}
-              </textPath>
+            <text dy={-8} fill={theme.subtextColor} fontSize={10} fontWeight={500}
+              fontFamily="'Inter', system-ui, sans-serif" textAnchor="middle">
+              <textPath href={`#ep-${edge.id}`} startOffset="50%">{edge.label}</textPath>
             </text>
           )}
         </>
       )}
 
-      {/* パーティクル（光の玉） */}
-      {pathLength > 0 &&
-        particles.map((p) => (
-          <g key={p.id}>
-            {/* 状態を持つパーティクル */}
-            {ps ? (
-              <StatefulParticle
-                state={ps}
-                path={path}
-                duration={duration}
-                offset={p.offset}
-                theme={theme}
-              />
-            ) : (
-              <SimpleParticle
-                path={path}
-                duration={duration}
-                offset={p.offset}
-                color={edge.color ?? theme.particleColor}
-              />
-            )}
-          </g>
-        ))}
+      {pathLength > 0 && (
+        ps
+          ? <StatefulParticle state={ps} path={path} tr={tr} cycleDur={cycleDur} delay={delay} theme={theme} />
+          : <SimpleParticle path={path} tr={tr} cycleDur={cycleDur} delay={delay} color={edge.color ?? theme.particleColor} />
+      )}
     </g>
   );
 }
 
-/** シンプルな光の玉 */
-function SimpleParticle({
-  path, duration, offset, color,
-}: {
-  path: string; duration: number; offset: number; color: string;
+/**
+ * animateMotion: dur=cycleDur, keyPoints で移動区間を制限
+ * → パス上を tr 割合だけ移動し、残りは終点に留まる
+ * animate (opacity): 移動中だけ visible、残りは invisible
+ */
+function SimpleParticle({ path, tr, cycleDur, delay, color }: {
+  path: string; tr: number; cycleDur: number; delay: number; color: string;
 }) {
   return (
     <>
-      {/* ソフトなグロー */}
-      <circle r={10} fill={color} opacity={0} filter="url(#glow)">
+      <circle r={8} fill={color} opacity={0} filter="url(#glow)">
         <animateMotion
-          dur={`${duration}s`} repeatCount="indefinite"
-          begin={`${offset * duration}s`} path={path}
+          dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
+          keyPoints="0;1;1" keyTimes={`0;${tr};1`} calcMode="linear" path={path}
         />
-        <animate
-          attributeName="opacity"
-          values="0;0.12;0.12;0"
-          keyTimes="0;0.08;0.92;1"
-          dur={`${duration}s`} begin={`${offset * duration}s`}
-          repeatCount="indefinite"
+        <animate attributeName="opacity"
+          values="0;0.18;0.18;0;0" keyTimes={`0;0.01;${tr - 0.01};${tr};1`}
+          dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
         />
       </circle>
-      {/* コアの玉 */}
-      <circle r={4} fill={color} opacity={0}>
+      <circle r={3.5} fill={color} opacity={0}>
         <animateMotion
-          dur={`${duration}s`} repeatCount="indefinite"
-          begin={`${offset * duration}s`} path={path}
+          dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
+          keyPoints="0;1;1" keyTimes={`0;${tr};1`} calcMode="linear" path={path}
         />
-        <animate
-          attributeName="opacity"
-          values="0;0.9;0.9;0"
-          keyTimes="0;0.08;0.92;1"
-          dur={`${duration}s`} begin={`${offset * duration}s`}
-          repeatCount="indefinite"
+        <animate attributeName="opacity"
+          values="0;0.9;0.9;0;0" keyTimes={`0;0.01;${tr - 0.01};${tr};1`}
+          dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
         />
       </circle>
     </>
   );
 }
 
-/** 状態を持つパーティクル — アイコン+ラベル付き */
-function StatefulParticle({
-  state, path, duration, offset, theme,
-}: {
-  state: ParticleState; path: string; duration: number; offset: number; theme: Theme;
+function StatefulParticle({ state, path, tr, cycleDur, delay, theme }: {
+  state: ParticleState; path: string; tr: number; cycleDur: number; delay: number; theme: Theme;
 }) {
   const sz = state.size ?? 24;
   const half = sz / 2;
@@ -172,49 +119,27 @@ function StatefulParticle({
   return (
     <g opacity={0}>
       <animateMotion
-        dur={`${duration}s`} repeatCount="indefinite"
-        begin={`${offset * duration}s`} path={path}
+        dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
+        keyPoints="0;1;1" keyTimes={`0;${tr};1`} calcMode="linear" path={path}
       />
-      <animate
-        attributeName="opacity"
-        values="0;1;1;0"
-        keyTimes="0;0.08;0.92;1"
-        dur={`${duration}s`} begin={`${offset * duration}s`}
-        repeatCount="indefinite"
+      <animate attributeName="opacity"
+        values="0;1;1;0;0" keyTimes={`0;0.01;${tr - 0.01};${tr};1`}
+        dur={`${cycleDur}s`} begin={`${delay}s`} repeatCount="indefinite"
       />
-
-      {/* 背景の丸 */}
       <circle r={half + 4} fill={state.color} opacity={0.15} />
       <circle r={half} fill={state.color} opacity={0.9} />
-
-      {/* アイコン */}
       {state.icon && (
         <g transform={`translate(${-half * 0.5}, ${-half * 0.5})`}>
-          <svg
-            width={half}
-            height={half}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width={half} height={half} viewBox="0 0 24 24"
+            fill="none" stroke="white" strokeWidth={2.5}
+            strokeLinecap="round" strokeLinejoin="round">
             <path d={getIconPath(state.icon)} />
           </svg>
         </g>
       )}
-
-      {/* ラベル */}
       {state.label && (
-        <text
-          y={half + 14}
-          textAnchor="middle"
-          fill={theme.textColor}
-          fontSize={9}
-          fontWeight={600}
-          fontFamily="system-ui, sans-serif"
-        >
+        <text y={half + 14} textAnchor="middle" fill={theme.textColor}
+          fontSize={9} fontWeight={600} fontFamily="'Inter', system-ui, sans-serif">
           {state.label}
         </text>
       )}
