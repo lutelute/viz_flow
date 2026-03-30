@@ -1,0 +1,39 @@
+.flow-canvas {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  margin: 0 auto;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.flow-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.flow-title {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.flow-title h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.03em;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.flow-title p {
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}

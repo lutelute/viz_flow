@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background 0.4s ease;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px 8px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.template-tabs,
+.theme-tabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab:hover {
+  opacity: 0.7;
+}
+
+.tab.active {
+  font-weight: 600;
+}
+
+.tab-sm {
+  padding: 3px 10px;
+  font-size: 11px;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.info {
+  padding: 12px;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
