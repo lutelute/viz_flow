@@ -12,9 +12,8 @@ interface Props {
 
 export function FlowNodeComponent({ node, theme, accentColor, showLabel }: Props) {
   const shape = node.shape ?? 'icon-only';
-  // muted = ベース構造（グレー、控えめ）
-  const color = node.muted ? theme.subtextColor : accentColor;
-  const textOpacity = node.muted ? 0.5 : 1;
+  const color = accentColor;
+  const textOpacity = 1;
 
   if (shape === 'icon-only') {
     return <IconOnlyNode node={node} theme={theme} color={color} showLabel={showLabel} textOpacity={textOpacity} />;
@@ -30,8 +29,8 @@ function IconOnlyNode({
 }) {
   const r = (node.width ?? 32) / 2;
   const iconSize = r * 1.9;  // アイコンをさらに大きく
-  const bgOpacity = node.muted ? 0.06 : 0.1;
-  const innerOpacity = node.muted ? 0.08 : 0.18;
+  const bgOpacity = 0.12;
+  const innerOpacity = 0.2;
   const labelGap = r + 24;   // ラベルとアイコンの間隔を広く
   const descGap = labelGap + 14;
 
@@ -55,7 +54,7 @@ function IconOnlyNode({
           x={node.x} y={node.y + labelGap}
           textAnchor="middle"
           fill={theme.textColor}
-          fontSize={11} fontWeight={node.muted ? 400 : 600}
+          fontSize={11} fontWeight={600}
           fontFamily="'Inter', system-ui, -apple-system, sans-serif"
           opacity={textOpacity}
         >
@@ -94,7 +93,7 @@ function BoxNode({
   const textAnchor = hasIcon ? ('start' as const) : ('middle' as const);
 
   return (
-    <g opacity={node.muted ? 0.45 : 1}>
+    <g opacity={1}>
       {renderShape(shape, node.x, node.y, w, h, theme, accentColor)}
 
       {hasIcon && (

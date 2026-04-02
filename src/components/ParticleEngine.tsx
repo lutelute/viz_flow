@@ -50,6 +50,26 @@ function resolveWaypoint(wp: Waypoint, nodeMap: Map<string, FlowNode>): { x: num
   return wp;
 }
 
+/** 2点間でL字経路の中間点を生成（computePathと同じルーティング） */
+function routeSegment(from: { x: number; y: number }, to: { x: number; y: number }): { x: number; y: number }[] {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+
+  // ほぼ直線 — 中間点不要
+  if (Math.abs(dx) < 8 || Math.abs(dy) < 8) {
+    return [from, to];
+  }
+
+  // L字経路: computePathと同じロジック
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    const midX = from.x + dx * 0.5;
+    return [from, { x: midX, y: from.y }, { x: midX, y: to.y }, to];
+  } else {
+    const midY = from.y + dy * 0.5;
+    return [from, { x: from.x, y: midY }, { x: to.x, y: midY }, to];
+  }
+}
+
 /** グループ定義 → コンパイル済みデータに変換 */
 function compileGroups(
   groups: ParticleGroup[],
@@ -59,7 +79,17 @@ function compileGroups(
   return groups.map(g => {
     const balls: CompiledBall[] = g.balls.map(b => {
       const resolved = b.waypoints.map(wp => resolveWaypoint(wp, nodeMap));
-      const route = buildSegments(resolved);
+      // L字経路の中間点を挿入してエッジと同じルートを辿る
+      const routed: { x: number; y: number }[] = [];
+      for (let i = 0; i < resolved.length; i++) {
+        if (i === 0) {
+          routed.push(resolved[0]);
+        } else {
+          const seg = routeSegment(resolved[i - 1], resolved[i]);
+          routed.push(...seg.slice(1));
+        }
+      }
+      const route = buildSegments(routed);
       // travel: 指定がなければ距離ベースで自動計算 (150px/秒 × speed)
       const travel = b.travel ?? (route.totalLen / (150 * speed));
 
@@ -86,24 +116,13 @@ function compileGroups(
   });
 }
 
-/** 1つの球のSVG文字列を生成 */
-function renderBall(b: CompiledBall, pos: { x: number; y: number }, arrived: boolean): string {
+/** 1つの球のSVG文字列を生成 — グローなし、コアのみ */
+function renderBall(b: CompiledBall, pos: { x: number; y: number }): string {
   const { x, y } = pos;
   let svg = '';
 
-  // 外殻グロー
-  svg += `<circle cx="${x}" cy="${y}" r="${b.outerRadius}" fill="${b.color}" opacity="${0.15 * b.opacity}" filter="url(#glow)"/>`;
-
-  // コア
-  svg += `<circle cx="${x}" cy="${y}" r="${b.coreRadius}" fill="${b.color}" opacity="${0.9 * b.opacity}"/>`;
-
-  // 到着時のパルスリング
-  if (arrived) {
-    svg += `<circle cx="${x}" cy="${y}" r="${b.coreRadius}" fill="none" stroke="${b.color}" stroke-width="1.5" opacity="0.4">`;
-    svg += `<animate attributeName="r" values="${b.coreRadius};${b.outerRadius * 2}" dur="0.6s" repeatCount="1"/>`;
-    svg += `<animate attributeName="opacity" values="0.4;0" dur="0.6s" repeatCount="1"/>`;
-    svg += `</circle>`;
-  }
+  // コアのみ（外殻グロー・パルス除去）
+  svg += `<circle cx="${x}" cy="${y}" r="${b.coreRadius}" fill="${b.color}" opacity="${b.opacity}"/>`;
 
   // ラベル
   if (b.label) {
@@ -165,21 +184,12 @@ export function ParticleEngine({ groups, nodeMap, layerRef, theme, speed, onAllA
 
           if (!arrived) allArrived = false;
 
-          html += renderBall(b, pos, false);
+          html += renderBall(b, pos);
         }
 
-        // 全球到着 → パルス(1回だけ)
+        // 全球到着コールバック
         if (allArrived && !arrivedFiredRef.current.has(gi)) {
           arrivedFiredRef.current.add(gi);
-          // 最後の球の終点にパルス
-          const lastBall = g.balls[g.balls.length - 1];
-          if (lastBall) {
-            const endPos = posAt(lastBall.route, 1);
-            html += `<circle cx="${endPos.x}" cy="${endPos.y}" r="6" fill="none" stroke="${lastBall.color}" stroke-width="2" opacity="0.6">`;
-            html += `<animate attributeName="r" values="6;25" dur="0.8s" fill="freeze"/>`;
-            html += `<animate attributeName="opacity" values="0.6;0" dur="0.8s" fill="freeze"/>`;
-            html += `</circle>`;
-          }
           onAllArrived?.();
         }
 

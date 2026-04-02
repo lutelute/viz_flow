@@ -15,6 +15,33 @@
   transition: background 0.4s ease;
 }
 
+/* ── Skip link (screen reader / keyboard) ── */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  padding: 8px 16px;
+  background: #6366f1;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 1000;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ── Focus ring (keyboard navigation) ── */
+
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 /* ── Controls ── */
 
 .controls {
@@ -25,6 +52,12 @@
   padding: 16px 16px 6px;
   width: 100%;
   max-width: 900px;
+}
+
+.control-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .view-toggle {
@@ -51,6 +84,13 @@
 .toggle-btn.active {
   font-weight: 700;
   background: rgba(0,0,0,0.04);
+}
+
+.anim-toggle {
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
 }
 
 .template-tabs,
@@ -154,5 +194,18 @@
 @media (max-width: 600px) {
   .comparison-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Reduced motion: system preference fallback ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .app {
+    transition: none;
+  }
+
+  .toggle-btn,
+  .tab {
+    transition: none;
   }
 }

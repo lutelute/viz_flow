@@ -1,4 +1,4 @@
-import type { FlowDefinition, FlowNode, FlowEdge, FlowZone, ParticleGroup } from '../core/types';
+import type { FlowDefinition, ParticleGroup } from '../core/types';
 
 const C = {
   base: '#94a3b8',
@@ -6,289 +6,272 @@ const C = {
   hi4: '#10b981', hi5: '#ef4444', hi6: '#14b8a6', hi7: '#f97316',
 };
 
-// カードサイズ
-const W = 460;
-const H = 270;
+// カードサイズ — 縦長（参考画像に合わせる）
+const W = 420;
+const H = 360;
 
-// 共通3点の固定座標 — 全RAGで同じ位置
-const Q  = { x: 50,  y: 100 };  // Query: 左
-const LM = { x: 360, y: 200 };  // LLM: 右下
-const OT = { x: 420, y: 200 };  // Output: LLMの右隣
+// 縦フローグリッド — 3列 × 4行
+const COL = { L: 80, C: 210, R: 340 };
+const ROW = { 1: 95, 2: 160, 3: 225, 4: 290 };
+
+// アイコンサイズ（icon-only, 大きめ）
+const SZ = 30;    // 通常
+const SZL = 34;   // 強調
+const SZS = 26;   // 小さめ
 
 function cfg(title: string, sub: string): FlowDefinition['config'] {
   return { title, subtitle: sub, width: W, height: H, theme: 'light', animationSpeed: 1, showLabels: true, particleMode: 'js' };
 }
 
-// 共通ベースノード
-function base(): FlowNode[] {
-  return [
-    { id: 'query',  label: 'Query',  ...Q,  icon: 'user',     color: C.base, width: 24, muted: true },
-    { id: 'llm',    label: 'LLM',    ...LM, icon: 'sparkles', color: C.base, width: 26, muted: true },
-    { id: 'output', label: 'Output', ...OT, icon: 'mail',     color: C.base, width: 20, muted: true },
-  ];
-}
-
-function baseEdges(): FlowEdge[] {
-  return [
-    { id: 'b1', from: 'llm', to: 'output' },
-  ];
-}
-
-// 共通パーティクル: LLM→Output
-function baseBall(): ParticleGroup['balls'][0] {
-  return { waypoints: ['llm', 'output'], color: C.base, delay: 5, travel: 1 };
+function ball(waypoints: string[], color: string, opts?: { label?: string; delay?: number; travel?: number }): ParticleGroup['balls'][0] {
+  return { waypoints, color, coreRadius: 4, delay: opts?.delay ?? 0, travel: opts?.travel ?? 3, label: opts?.label };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 1. Naive RAG — Z字配置、全ノードカラー
-//    Query → Embed → VecDB (上段左→右)
-//    LLM ← ← ← ← ← ← ← (下段右→左)
-//    Output (右上)
+// 1. Naive RAG — 縦フロー: Query → Embed → VecDB → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const naiveRag: FlowDefinition = {
   nodes: [
-    { id: 'query',  label: 'Query',     ...Q,              icon: 'user',     color: C.hi1, width: 24 },
-    { id: 'embed',  label: 'Embed',     x: 160, y: 100,  icon: 'cpu',      color: C.hi1, width: 22 },
-    { id: 'vecdb',  label: 'Vector DB', x: 270, y: 100,  icon: 'database', color: C.hi1, width: 24 },
-    { id: 'llm',    label: 'LLM',       ...LM,            icon: 'sparkles', color: C.hi1, width: 26 },
-    { id: 'output', label: 'Output',    ...OT,            icon: 'mail',     color: C.hi1, width: 20 },
+    { id: 'query',  label: 'Query',     x: COL.L, y: ROW[1], icon: 'user',     color: C.hi1, width: SZ },
+    { id: 'embed',  label: 'Embed',     x: COL.C, y: ROW[1], icon: 'cpu',      color: C.hi1, width: SZ },
+    { id: 'vecdb',  label: 'Vector DB', x: COL.R, y: ROW[2], icon: 'database', color: C.hi1, width: SZL },
+    { id: 'llm',    label: 'LLM',       x: COL.C, y: ROW[3], icon: 'sparkles', color: C.hi4, width: SZL },
+    { id: 'output', label: 'Output',    x: COL.L, y: ROW[4], icon: 'mail',     color: C.hi1, width: SZS },
   ],
   edges: [
-    { id: 'e1', from: 'query', to: 'embed' },
-    { id: 'e2', from: 'embed', to: 'vecdb' },
-    { id: 'e3', from: 'vecdb', to: 'llm' },
-    { id: 'e4', from: 'llm',   to: 'output' },
+    { id: 'e1', from: 'query', to: 'embed',  color: C.hi1 },
+    { id: 'e2', from: 'embed', to: 'vecdb',  color: C.hi1 },
+    { id: 'e3', from: 'vecdb', to: 'llm',    color: C.hi1 },
+    { id: 'e4', from: 'llm',   to: 'output', color: C.hi1 },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
-    balls: [
-      { waypoints: ['query', 'embed', 'vecdb', 'llm', 'output'], color: C.hi1, label: 'data', travel: 4 },
-    ],
+    balls: [ball(['query', 'embed', 'vecdb', 'llm', 'output'], C.hi1, { travel: 4 })],
   }],
   config: cfg('Naive RAG', 'Linear — the baseline'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 2. Multimodal RAG — 左に2入力が分岐してEmbedに合流
+// 2. Multimodal RAG — Text/Image → Embed → VecDB → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const multimodalRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'text',  label: 'Text',  x: 50,  y: 70,  icon: 'file-input', color: C.hi1, width: 20 },
-    { id: 'img',   label: 'Image', x: 50,  y: 150, icon: 'eye',        color: C.hi2, width: 20 },
-    { id: 'embed', label: 'Embed', x: 170, y: 110, icon: 'cpu',        color: C.hi1, width: 22 },
-    { id: 'vecdb', label: 'VecDB', x: 290, y: 110, icon: 'database',   color: C.base, width: 22, muted: true },
+    { id: 'text',   label: 'Text',   x: COL.L, y: ROW[1], icon: 'file-input', color: C.hi1, width: SZ },
+    { id: 'img',    label: 'Image',  x: COL.R, y: ROW[1], icon: 'eye',        color: C.hi2, width: SZ },
+    { id: 'embed',  label: 'Embed',  x: COL.C, y: ROW[2], icon: 'cpu',        color: C.hi1, width: SZ },
+    { id: 'vecdb',  label: 'VecDB',  x: COL.C, y: ROW[3], icon: 'database',   color: C.base, width: SZL },
+    { id: 'llm',    label: 'LLM',    x: COL.L, y: ROW[4], icon: 'sparkles',   color: C.hi4, width: SZL },
+    { id: 'output', label: 'Output', x: COL.R, y: ROW[4], icon: 'mail',       color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
-    { id: 'h1', from: 'text', to: 'embed', color: C.hi1 },
-    { id: 'h2', from: 'img',  to: 'embed', color: C.hi2 },
+    { id: 'h1', from: 'text',  to: 'embed', color: C.hi1 },
+    { id: 'h2', from: 'img',   to: 'embed', color: C.hi2 },
     { id: 'h3', from: 'embed', to: 'vecdb' },
     { id: 'h4', from: 'vecdb', to: 'llm' },
+    { id: 'h5', from: 'llm',   to: 'output' },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
     balls: [
-      { waypoints: ['text', 'embed', 'vecdb', 'llm'], color: C.hi1, label: 'txt', delay: 0, travel: 2.5 },
-      { waypoints: ['img', 'embed', 'vecdb', 'llm'],  color: C.hi2, label: 'img', delay: 0.5, travel: 2.5 },
-      baseBall(),
+      ball(['text', 'embed', 'vecdb', 'llm', 'output'], C.hi1, { label: 'txt', travel: 3.5 }),
+      ball(['img', 'embed', 'vecdb', 'llm', 'output'],  C.hi2, { label: 'img', delay: 0.5, travel: 3.5 }),
     ],
   }],
   config: cfg('Multimodal RAG', '+ multi-modal input'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 3. HyDE — U字: Query→Hypo(左下)→Embed(中央下)→VecDB(右)→LLM
+// 3. HyDE — Query → Hypothesis → Embed → VecDB → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const hydeRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'hypo',  label: 'Hypothesis', x: 130, y: 160, icon: 'lightbulb', color: C.hi3, width: 24 },
-    { id: 'embed', label: 'Embed',      x: 250, y: 210, icon: 'cpu',       color: C.base, width: 20, muted: true },
-    { id: 'vecdb', label: 'VecDB',      x: 350, y: 130, icon: 'database',  color: C.base, width: 22, muted: true },
+    { id: 'query',  label: 'Query',      x: COL.L, y: ROW[1], icon: 'user',      color: C.base, width: SZ },
+    { id: 'hypo',   label: 'Hypothesis', x: COL.R, y: ROW[1], icon: 'lightbulb', color: C.hi3,  width: SZL },
+    { id: 'embed',  label: 'Embed',      x: COL.C, y: ROW[2], icon: 'cpu',       color: C.hi3,  width: SZ },
+    { id: 'vecdb',  label: 'VecDB',      x: COL.C, y: ROW[3], icon: 'database',  color: C.base, width: SZL },
+    { id: 'llm',    label: 'LLM',        x: COL.L, y: ROW[4], icon: 'sparkles',  color: C.hi4,  width: SZL },
+    { id: 'output', label: 'Output',     x: COL.R, y: ROW[4], icon: 'mail',      color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
-    { id: 'h1', from: 'query', to: 'hypo',  color: C.hi3 },
-    { id: 'h2', from: 'hypo',  to: 'embed', color: C.hi3 },
+    { id: 'h1', from: 'query', to: 'hypo',   color: C.hi3 },
+    { id: 'h2', from: 'hypo',  to: 'embed',  color: C.hi3 },
     { id: 'h3', from: 'embed', to: 'vecdb' },
     { id: 'h4', from: 'vecdb', to: 'llm' },
+    { id: 'h5', from: 'llm',   to: 'output' },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
-    balls: [
-      { waypoints: ['query', 'hypo', 'embed', 'vecdb', 'llm'], color: C.hi3, label: 'hypo', travel: 3.5 },
-      baseBall(),
-    ],
+    balls: [ball(['query', 'hypo', 'embed', 'vecdb', 'llm', 'output'], C.hi3, { label: 'hypo', travel: 4.5 })],
   }],
   config: cfg('HyDE RAG', '+ hypothetical doc before embed'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 4. Corrective RAG — 中央に評価ゲート、下段にWebフォールバック
+// 4. Corrective RAG — 上: Query→Embed→VecDB, 中: Check, 下段分岐: ok→LLM / ng→Web→LLM
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const correctiveRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'embed', label: 'Embed', x: 150, y: 100,  icon: 'cpu',      color: C.base, width: 20, muted: true },
-    { id: 'vecdb', label: 'VecDB', x: 250, y: 100,  icon: 'database', color: C.base, width: 22, muted: true },
-    { id: 'eval',  label: 'Check', x: 350, y: 100,  icon: 'target',   color: C.hi5, width: 24 },
-    { id: 'web',   label: 'Web',   x: 200, y: 200, icon: 'globe',    color: C.hi3, width: 22 },
+    { id: 'query',  label: 'Query',  x: COL.L, y: ROW[1], icon: 'user',     color: C.base, width: SZ },
+    { id: 'embed',  label: 'Embed',  x: COL.C, y: ROW[1], icon: 'cpu',      color: C.base, width: SZ },
+    { id: 'vecdb',  label: 'VecDB',  x: COL.R, y: ROW[1], icon: 'database', color: C.base, width: SZ },
+    { id: 'eval',   label: 'Check',  x: COL.C, y: ROW[2], icon: 'target',   color: C.hi5,  width: SZL },
+    { id: 'web',    label: 'Web',    x: COL.R, y: ROW[3], icon: 'globe',    color: C.hi3,  width: SZ },
+    { id: 'llm',    label: 'LLM',    x: COL.L, y: ROW[3], icon: 'sparkles', color: C.hi4,  width: SZL },
+    { id: 'output', label: 'Output', x: COL.L, y: ROW[4], icon: 'mail',     color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
     { id: 'h1', from: 'query', to: 'embed' },
     { id: 'h2', from: 'embed', to: 'vecdb' },
     { id: 'h3', from: 'vecdb', to: 'eval', color: C.hi5 },
-    { id: 'h4', from: 'eval',  to: 'llm', color: C.hi4 },
-    { id: 'h5', from: 'eval',  to: 'web', color: C.hi5, dashed: true },
-    { id: 'h6', from: 'web',   to: 'llm', color: C.hi3 },
-  ],
-  zones: [
-    { id: 'z1', label: 'CORRECTION', x: 160, y: 175, width: 230, height: 65, color: C.hi5, dashed: true },
+    { id: 'h4', from: 'eval',  to: 'llm',  color: C.hi4 },
+    { id: 'h5', from: 'eval',  to: 'web',  color: C.hi5, dashed: true },
+    { id: 'h6', from: 'web',   to: 'llm',  color: C.hi3 },
+    { id: 'h7', from: 'llm',   to: 'output' },
   ],
   particleGroups: [{
     id: 'pass', pauseDuration: 2.5,
     balls: [
-      { waypoints: ['query', 'embed', 'vecdb', 'eval'], color: C.base, delay: 0, travel: 2 },
-      { waypoints: ['eval', 'llm'], color: C.hi4, label: 'ok', delay: 2.5, travel: 1 },
-      { waypoints: ['eval', 'web', 'llm'], color: C.hi5, label: 'ng', delay: 2.5, travel: 2 },
-      baseBall(),
+      ball(['query', 'embed', 'vecdb', 'eval'], C.base, { travel: 2 }),
+      ball(['eval', 'llm', 'output'], C.hi4, { label: 'ok', delay: 2.5, travel: 2 }),
+      ball(['eval', 'web', 'llm', 'output'], C.hi5, { label: 'ng', delay: 2.5, travel: 2.5 }),
     ],
   }],
   config: cfg('Corrective RAG', '+ relevance check → fallback'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 5. Graph RAG — 左→中央上にExtract/KG、中央下にTraverse
+// 5. Graph RAG — Query → Extract → GraphDB → Traverse → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const graphRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'extract',  label: 'Extract',  x: 160, y: 100,  icon: 'search',  color: C.hi6, width: 22 },
-    { id: 'kg',       label: 'GraphDB',  x: 280, y: 100,  icon: 'git',     color: C.hi6, width: 26 },
-    { id: 'traverse', label: 'Traverse', x: 220, y: 190, icon: 'shuffle', color: C.hi6, width: 22 },
+    { id: 'query',    label: 'Query',    x: COL.L, y: ROW[1], icon: 'user',     color: C.base, width: SZ },
+    { id: 'extract',  label: 'Extract',  x: COL.R, y: ROW[1], icon: 'search',   color: C.hi6,  width: SZ },
+    { id: 'kg',       label: 'GraphDB',  x: COL.C, y: ROW[2], icon: 'git',      color: C.hi6,  width: SZL },
+    { id: 'traverse', label: 'Traverse', x: COL.R, y: ROW[3], icon: 'shuffle',  color: C.hi6,  width: SZ },
+    { id: 'llm',      label: 'LLM',      x: COL.L, y: ROW[4], icon: 'sparkles', color: C.hi4,  width: SZL },
+    { id: 'output',   label: 'Output',   x: COL.R, y: ROW[4], icon: 'mail',     color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
     { id: 'h1', from: 'query',    to: 'extract', color: C.hi6 },
-    { id: 'h2', from: 'extract',  to: 'kg', color: C.hi6 },
+    { id: 'h2', from: 'extract',  to: 'kg',      color: C.hi6 },
     { id: 'h3', from: 'kg',       to: 'traverse', color: C.hi6 },
     { id: 'h4', from: 'query',    to: 'traverse', dashed: true },
-    { id: 'h5', from: 'traverse', to: 'llm', color: C.hi6 },
+    { id: 'h5', from: 'traverse', to: 'llm',      color: C.hi6 },
+    { id: 'h6', from: 'llm',      to: 'output' },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
-    balls: [
-      { waypoints: ['query', 'extract', 'kg', 'traverse', 'llm'], color: C.hi6, label: 'entity', travel: 3.5 },
-      baseBall(),
-    ],
+    balls: [ball(['query', 'extract', 'kg', 'traverse', 'llm', 'output'], C.hi6, { label: 'entity', travel: 4.5 })],
   }],
   config: cfg('Graph RAG', '+ knowledge graph traversal'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 6. Hybrid RAG — 中央に2つの検索が縦に展開、Re-rankで合流
+// 6. Hybrid RAG — Query → Dense+Sparse → Re-rank → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const hybridRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'dense',  label: 'Dense',   x: 160, y: 80,  icon: 'database', color: C.hi1, width: 22 },
-    { id: 'sparse', label: 'Sparse',  x: 160, y: 180, icon: 'search',   color: C.hi3, width: 22 },
-    { id: 'rerank', label: 'Re-rank', x: 290, y: 130, icon: 'filter',   color: C.hi2, width: 24 },
+    { id: 'query',  label: 'Query',   x: COL.C, y: ROW[1], icon: 'user',     color: C.base, width: SZ },
+    { id: 'dense',  label: 'Dense',   x: COL.L, y: ROW[2], icon: 'database', color: C.hi1,  width: SZ },
+    { id: 'sparse', label: 'Sparse',  x: COL.R, y: ROW[2], icon: 'search',   color: C.hi3,  width: SZ },
+    { id: 'rerank', label: 'Re-rank', x: COL.C, y: ROW[3], icon: 'filter',   color: C.hi2,  width: SZL },
+    { id: 'llm',    label: 'LLM',     x: COL.L, y: ROW[4], icon: 'sparkles', color: C.hi4,  width: SZL },
+    { id: 'output', label: 'Output',  x: COL.R, y: ROW[4], icon: 'mail',     color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
-    { id: 'h1', from: 'query',  to: 'dense', color: C.hi1 },
+    { id: 'h1', from: 'query',  to: 'dense',  color: C.hi1 },
     { id: 'h2', from: 'query',  to: 'sparse', color: C.hi3 },
     { id: 'h3', from: 'dense',  to: 'rerank', color: C.hi1 },
     { id: 'h4', from: 'sparse', to: 'rerank', color: C.hi3 },
-    { id: 'h5', from: 'rerank', to: 'llm', color: C.hi2 },
+    { id: 'h5', from: 'rerank', to: 'llm',    color: C.hi2 },
+    { id: 'h6', from: 'llm',    to: 'output' },
   ],
   zones: [
-    { id: 'z1', label: 'DUAL SEARCH', x: 120, y: 60, width: 90, height: 170, color: C.hi2, dashed: true },
+    { id: 'z1', label: 'DUAL SEARCH', x: COL.L - 30, y: ROW[2] - 30, width: COL.R - COL.L + 60, height: 60, color: C.hi2, dashed: true },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
     balls: [
-      { waypoints: ['query', 'dense', 'rerank'],  color: C.hi1, delay: 0, travel: 1.8 },
-      { waypoints: ['query', 'sparse', 'rerank'], color: C.hi3, delay: 0, travel: 1.8 },
-      { waypoints: ['rerank', 'llm'], color: C.hi2, delay: 2.2, travel: 1.5 },
-      baseBall(),
+      ball(['query', 'dense', 'rerank'],  C.hi1, { delay: 0, travel: 1.8 }),
+      ball(['query', 'sparse', 'rerank'], C.hi3, { delay: 0, travel: 1.8 }),
+      ball(['rerank', 'llm', 'output'],   C.hi2, { delay: 2.2, travel: 2 }),
     ],
   }],
   config: cfg('Hybrid RAG', '+ dense + sparse → re-rank'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 7. Adaptive RAG — Routerから3方向に分岐（縦展開）
+// 7. Adaptive RAG — Query → Router → RAG/Web/Direct → LLM → Output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const adaptiveRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'router', label: 'Router', x: 160, y: 140, icon: 'shuffle', color: C.hi7, width: 24 },
-    { id: 'rag',    label: 'RAG',    x: 290, y: 80,  icon: 'database', color: C.base, width: 20, muted: true },
-    { id: 'web',    label: 'Web',    x: 290, y: 145, icon: 'globe',    color: C.hi3, width: 20 },
-    { id: 'direct', label: 'Direct', x: 290, y: 210, icon: 'zap',      color: C.hi7, width: 20 },
+    { id: 'query',  label: 'Query',  x: COL.C, y: ROW[1], icon: 'user',     color: C.base, width: SZ },
+    { id: 'router', label: 'Router', x: COL.C, y: ROW[2], icon: 'shuffle',  color: C.hi7,  width: SZL },
+    { id: 'rag',    label: 'RAG',    x: COL.L, y: ROW[3], icon: 'database', color: C.hi1,  width: SZ },
+    { id: 'web',    label: 'Web',    x: COL.C, y: ROW[3], icon: 'globe',    color: C.hi3,  width: SZ },
+    { id: 'direct', label: 'Direct', x: COL.R, y: ROW[3], icon: 'zap',      color: C.hi7,  width: SZ },
+    { id: 'llm',    label: 'LLM',    x: COL.L, y: ROW[4], icon: 'sparkles', color: C.hi4,  width: SZL },
+    { id: 'output', label: 'Output', x: COL.R, y: ROW[4], icon: 'mail',     color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
     { id: 'h1', from: 'query',  to: 'router', color: C.hi7 },
-    { id: 'h2', from: 'router', to: 'rag' },
-    { id: 'h3', from: 'router', to: 'web', color: C.hi3 },
+    { id: 'h2', from: 'router', to: 'rag',    color: C.hi1 },
+    { id: 'h3', from: 'router', to: 'web',    color: C.hi3 },
     { id: 'h4', from: 'router', to: 'direct', color: C.hi7 },
-    { id: 'h5', from: 'rag',    to: 'llm' },
-    { id: 'h6', from: 'web',    to: 'llm', color: C.hi3 },
-    { id: 'h7', from: 'direct', to: 'llm', color: C.hi7 },
+    { id: 'h5', from: 'rag',    to: 'llm',    color: C.hi1 },
+    { id: 'h6', from: 'web',    to: 'llm',    color: C.hi3 },
+    { id: 'h7', from: 'direct', to: 'llm',    color: C.hi7 },
+    { id: 'h8', from: 'llm',    to: 'output' },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2.5,
     balls: [
-      { waypoints: ['query', 'router'], color: C.hi7, delay: 0, travel: 1 },
-      { waypoints: ['router', 'rag', 'llm'],    color: C.base, delay: 1.2, travel: 2 },
-      { waypoints: ['router', 'web', 'llm'],    color: C.hi3,  delay: 1.2, travel: 2 },
-      { waypoints: ['router', 'direct', 'llm'], color: C.hi7,  delay: 1.2, travel: 2 },
-      baseBall(),
+      ball(['query', 'router'], C.hi7, { travel: 1 }),
+      ball(['router', 'rag', 'llm'],    C.hi1, { delay: 1.2, travel: 2 }),
+      ball(['router', 'web', 'llm'],    C.hi3, { delay: 1.2, travel: 2 }),
+      ball(['router', 'direct', 'llm'], C.hi7, { delay: 1.2, travel: 2 }),
+      ball(['llm', 'output'], C.base, { delay: 3.5, travel: 1 }),
     ],
   }],
   config: cfg('Adaptive RAG', '+ router → multiple paths'),
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 8. Agentic RAG — Planner→3ツール→Merge→LLM（最も複雑）
+// 8. Agentic RAG — Query → Plan → Tools(3列) → Merge → LLM
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const agenticRag: FlowDefinition = {
   nodes: [
-    ...base(),
-    { id: 'planner', label: 'Plan',  x: 140, y: 140, icon: 'lightbulb', color: C.hi7, width: 24 },
-    { id: 'tool1',   label: 'RAG',   x: 250, y: 80,  icon: 'search',    color: C.hi1, width: 20 },
-    { id: 'tool2',   label: 'Web',   x: 250, y: 145, icon: 'globe',     color: C.hi3, width: 20 },
-    { id: 'tool3',   label: 'Code',  x: 250, y: 210, icon: 'code',      color: C.hi6, width: 20 },
-    { id: 'merge',   label: 'Merge', x: 350, y: 140, icon: 'layers',    color: C.hi7, width: 20 },
+    { id: 'query',   label: 'Query', x: COL.L, y: ROW[1], icon: 'user',      color: C.base, width: SZ },
+    { id: 'planner', label: 'Plan',  x: COL.C, y: ROW[1], icon: 'lightbulb', color: C.hi7,  width: SZL },
+    { id: 'tool1',   label: 'RAG',   x: COL.L, y: ROW[2], icon: 'search',    color: C.hi1,  width: SZ },
+    { id: 'tool2',   label: 'Web',   x: COL.C, y: ROW[2], icon: 'globe',     color: C.hi3,  width: SZ },
+    { id: 'tool3',   label: 'Code',  x: COL.R, y: ROW[2], icon: 'code',      color: C.hi6,  width: SZ },
+    { id: 'merge',   label: 'Merge', x: COL.C, y: ROW[3], icon: 'layers',    color: C.hi7,  width: SZ },
+    { id: 'llm',     label: 'LLM',   x: COL.L, y: ROW[4], icon: 'sparkles',  color: C.hi4,  width: SZL },
+    { id: 'output',  label: 'Output',x: COL.R, y: ROW[4], icon: 'mail',      color: C.base, width: SZS },
   ],
   edges: [
-    ...baseEdges(),
     { id: 'h1', from: 'query',   to: 'planner', color: C.hi7 },
-    { id: 'h2', from: 'planner', to: 'tool1', color: C.hi1 },
-    { id: 'h3', from: 'planner', to: 'tool2', color: C.hi3 },
-    { id: 'h4', from: 'planner', to: 'tool3', color: C.hi6 },
-    { id: 'h5', from: 'tool1',   to: 'merge', color: C.hi1 },
-    { id: 'h6', from: 'tool2',   to: 'merge', color: C.hi3 },
-    { id: 'h7', from: 'tool3',   to: 'merge', color: C.hi6 },
-    { id: 'h8', from: 'merge',   to: 'llm', color: C.hi7 },
+    { id: 'h2', from: 'planner', to: 'tool1',   color: C.hi1 },
+    { id: 'h3', from: 'planner', to: 'tool2',   color: C.hi3 },
+    { id: 'h4', from: 'planner', to: 'tool3',   color: C.hi6 },
+    { id: 'h5', from: 'tool1',   to: 'merge',   color: C.hi1 },
+    { id: 'h6', from: 'tool2',   to: 'merge',   color: C.hi3 },
+    { id: 'h7', from: 'tool3',   to: 'merge',   color: C.hi6 },
+    { id: 'h8', from: 'merge',   to: 'llm',     color: C.hi7 },
+    { id: 'h9', from: 'llm',     to: 'output' },
   ],
   zones: [
-    { id: 'z1', label: 'TOOLS', x: 215, y: 60, width: 75, height: 190, color: C.hi7, dashed: true },
+    { id: 'z1', label: 'TOOLS', x: COL.L - 30, y: ROW[2] - 30, width: COL.R - COL.L + 60, height: 60, color: C.hi7, dashed: true },
   ],
   particleGroups: [{
     id: 'flow', pauseDuration: 2,
     balls: [
-      { waypoints: ['query', 'planner'], color: C.hi7, delay: 0, travel: 1 },
-      { waypoints: ['planner', 'tool1', 'merge'], color: C.hi1, delay: 1.2, travel: 1.5 },
-      { waypoints: ['planner', 'tool2', 'merge'], color: C.hi3, delay: 1.5, travel: 1.5 },
-      { waypoints: ['planner', 'tool3', 'merge'], color: C.hi6, delay: 1.8, travel: 1.5 },
-      { waypoints: ['merge', 'llm'], color: C.hi7, label: 'merged', delay: 3.5, travel: 1 },
-      baseBall(),
+      ball(['query', 'planner'], C.hi7, { travel: 1 }),
+      ball(['planner', 'tool1', 'merge'], C.hi1, { delay: 1.2, travel: 1.5 }),
+      ball(['planner', 'tool2', 'merge'], C.hi3, { delay: 1.5, travel: 1.5 }),
+      ball(['planner', 'tool3', 'merge'], C.hi6, { delay: 1.8, travel: 1.5 }),
+      ball(['merge', 'llm', 'output'], C.hi7, { label: 'merged', delay: 3.5, travel: 1.5 }),
     ],
   }],
   config: cfg('Agentic RAG', '+ planner + tools'),

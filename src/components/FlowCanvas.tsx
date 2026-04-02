@@ -2,6 +2,7 @@ import { useRef, useMemo } from 'react';
 import type { FlowDefinition } from '../core/types';
 import { themes } from '../core/themes';
 import { computePath } from '../core/path';
+import { useAnimationEnabled } from '../core/a11y';
 import { FlowNodeComponent } from './FlowNode';
 import { FlowZoneComponent } from './FlowZone';
 import { AnimatedEdge } from './AnimatedEdge';
@@ -19,6 +20,7 @@ export function FlowCanvas({ flow }: Props) {
   const speed = config.animationSpeed ?? 1;
   const cycleDur = 8 / speed;
   const particleLayerRef = useRef<SVGGElement>(null);
+  const animEnabled = useAnimationEnabled();
 
   // JS パーティクルモード判定
   const useJsParticles = config.particleMode === 'js'
@@ -60,6 +62,9 @@ export function FlowCanvas({ flow }: Props) {
     ? (lastEdge.delay ?? 0) + 2 / ((lastEdge.speed ?? 1) * speed)
     : 0;
 
+  // SVG の aria-label を生成
+  const svgLabel = buildSvgLabel(config.title, nodes);
+
   return (
     <div
       className="flow-canvas"
@@ -84,6 +89,8 @@ export function FlowCanvas({ flow }: Props) {
         height={config.height}
         viewBox={`0 0 ${config.width} ${config.height}`}
         className="flow-svg"
+        role="img"
+        aria-label={svgLabel}
       >
         <defs>
           <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
@@ -120,8 +127,8 @@ export function FlowCanvas({ flow }: Props) {
           />
         ))}
 
-        {/* SVG方式: 到着パルス */}
-        {!useJsParticles && lastNode && (
+        {/* SVG方式: 到着パルス（アニメーション有効時のみ） */}
+        {animEnabled && !useJsParticles && lastNode && (
           <ArrivalPulse
             x={lastNode.x} y={lastNode.y}
             color={lastNode.color ?? theme.accentColors[0]}
@@ -133,8 +140,8 @@ export function FlowCanvas({ flow }: Props) {
         <g ref={particleLayerRef} />
       </svg>
 
-      {/* JS パーティクルエンジン */}
-      {useJsParticles && flow.particleGroups && (
+      {/* JS パーティクルエンジン（アニメーション有効時のみ） */}
+      {animEnabled && useJsParticles && flow.particleGroups && (
         <ParticleEngine
           groups={flow.particleGroups}
           nodeMap={nodeMap}
@@ -145,6 +152,18 @@ export function FlowCanvas({ flow }: Props) {
       )}
     </div>
   );
+}
+
+/** SVG用のアクセシブルな説明文を生成 */
+function buildSvgLabel(
+  title: string | undefined,
+  nodes: { label: string }[],
+): string {
+  const nodeLabels = nodes.map((n) => n.label).join(' → ');
+  if (title) {
+    return `${title}: ${nodeLabels}`;
+  }
+  return `Flow diagram: ${nodeLabels}`;
 }
 
 /** エッジの線だけ描画（JS パーティクルモード用） */
@@ -172,7 +191,7 @@ function StaticEdge({ edge, path, theme }: {
         strokeDasharray={edge.dashed ? '6 4' : undefined}
         strokeLinecap="round"
         markerEnd={showArrow ? `url(#${markerId})` : undefined}
-        opacity={0.5}
+        opacity={0.7}
       />
       {edge.label && (
         <>

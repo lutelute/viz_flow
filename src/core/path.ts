@@ -1,8 +1,8 @@
 import type { FlowNode } from './types';
 
 /**
- * n8n/Mermaid風のパス生成
- * 直線ベースでL字に曲がる。角だけ小さな丸み。
+ * 回路図風パス生成
+ * 直線ベースでL字に曲がる。角は小さな丸み。
  */
 export function computePath(from: FlowNode, to: FlowNode): string {
   const dx = to.x - from.x;

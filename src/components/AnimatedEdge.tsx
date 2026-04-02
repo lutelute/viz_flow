@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { FlowEdge, ParticleState } from '../core/types';
 import type { Theme } from '../core/themes';
+import { useAnimationEnabled } from '../core/a11y';
 import { getIconPath } from '../utils/icons';
 
 interface Props {
@@ -17,6 +18,7 @@ export function AnimatedEdge({ edge, path, theme, speed }: Props) {
   const showArrow = edge.arrow !== false;
   const markerId = `arrow-${edge.id}`;
   const ps = edge.particleState;
+  const animEnabled = useAnimationEnabled();
 
   const travelDur = 1.5 / ((edge.speed ?? 1) * speed);
   const cycleDur = 8 / speed;
@@ -67,7 +69,8 @@ export function AnimatedEdge({ edge, path, theme, speed }: Props) {
         </>
       )}
 
-      {pathLength > 0 && (
+      {/* アニメーション無効時はパーティクル非表示 */}
+      {animEnabled && pathLength > 0 && (
         ps
           ? <StatefulParticle state={ps} path={path} tr={tr} cycleDur={cycleDur} delay={delay} theme={theme} />
           : <SimpleParticle path={path} tr={tr} cycleDur={cycleDur} delay={delay} color={edge.color ?? theme.particleColor} />

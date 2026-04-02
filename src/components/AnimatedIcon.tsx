@@ -22,6 +22,7 @@
  */
 
 import { getIconPath } from '../utils/icons';
+import { useAnimationEnabled } from '../core/a11y';
 
 // 動作系アイコンの分類
 const ANIM_TYPE: Record<string, 'pulse' | 'sparkle' | 'spin' | 'bounce' | 'blink'> = {
@@ -59,18 +60,19 @@ interface Props {
 }
 
 export function AnimatedIcon({ icon, size, color, muted, nodeId }: Props) {
-  const animType = muted ? undefined : ANIM_TYPE[icon];
+  const animType = ANIM_TYPE[icon];
   const pathD = getIconPath(icon);
+  const animEnabled = useAnimationEnabled();
 
-  if (!animType) {
-    // 静的アイコン
+  // 静的アイコン or アニメーション無効時
+  if (!animType || !animEnabled) {
     return (
       <svg
         width={size} height={size}
         viewBox="0 0 24 24"
         fill="none" stroke={color}
         strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-        opacity={muted ? 0.4 : 1}
+        opacity={1}
       >
         <path d={pathD} />
       </svg>

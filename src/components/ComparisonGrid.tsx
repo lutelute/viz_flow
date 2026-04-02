@@ -14,7 +14,7 @@ interface Props {
  */
 export function ComparisonGrid({ items, theme, themeKey }: Props) {
   return (
-    <div className="comparison-grid">
+    <div className="comparison-grid" role="list" aria-label="RAG architecture comparison">
       {items.map((item) => {
         const flow: FlowDefinition = {
           ...item.flow,
@@ -25,12 +25,18 @@ export function ComparisonGrid({ items, theme, themeKey }: Props) {
         };
 
         // グリッド用にスケーリング
-        const scale = 0.85;
+        const scale = 0.78;
         const w = flow.config.width * scale;
         const h = flow.config.height * scale;
 
         return (
-          <div key={item.key} className="comparison-card" style={{ borderColor: theme.nodeBorder }}>
+          <div
+            key={item.key}
+            className="comparison-card"
+            role="listitem"
+            aria-label={item.name}
+            style={{ borderColor: theme.nodeBorder }}
+          >
             <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: flow.config.width, height: flow.config.height }}>
               <FlowCanvas flow={flow} />
             </div>
