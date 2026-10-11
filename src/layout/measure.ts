@@ -62,7 +62,7 @@ export function canvasMeasurer(): TextMeasurer {
       const key = `${weight}|${size}|${family}|${text}`;
       const hit = cache.get(key);
       if (hit !== undefined) return hit;
-      c.font = `${weight} ${size}px ${family}`;
+      c.font = `${weight} ${size}px "${family}"`;
       const w = c.measureText(text).width;
       cache.set(key, w);
       return w;

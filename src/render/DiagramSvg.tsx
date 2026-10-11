@@ -3,6 +3,7 @@ import type { Diagram } from '../model/diagram';
 import type { ResolvedLayout, TextMeasurer } from '../layout/types';
 import type { CompiledStep, FrameState } from '../timeline/types';
 import { makeCtx, type Skin } from '../skins/types';
+import { fitTransform } from './fit';
 
 export interface DiagramSvgProps {
   diagram: Diagram;
@@ -71,7 +72,7 @@ export function DiagramSvg(props: DiagramSvgProps): ReactNode {
       </g>
 
       <g data-layer="particles" aria-hidden="true">
-        {particlesForDisplay(frame).map((p) => (
+        {particlesForDisplay(frame, diagram).map((p) => (
           <g key={`${p.id}:${p.edge ?? p.node ?? ''}`}>{skin.Particle(ctx, p)}</g>
         ))}
       </g>
@@ -85,57 +86,11 @@ export function DiagramSvg(props: DiagramSvgProps): ReactNode {
   );
 }
 
-/**
- * 図の実寸が figure 枠より小さいときは枠に合わせて拡大し、大きいときは縮める。
- * 投稿枠（4:5 など）で余白が空きすぎないようにするため。free 枠では等倍。
- */
-function fitTransform(layout: ResolvedLayout): string | undefined {
-  const b = figureBounds(layout);
-  if (!b) return undefined;
-  const f = layout.figure;
-  const pad = 8;
-  const sx = (f.width - pad * 2) / b.width;
-  const sy = (f.height - pad * 2) / b.height;
-  const s = Math.min(sx, sy, 1.6);
-  if (Math.abs(s - 1) < 0.01) return undefined;
-  const cx = f.x + f.width / 2;
-  const cy = f.y + f.height / 2;
-  const bx = b.x + b.width / 2;
-  const by = b.y + b.height / 2;
-  const tx = Math.round(cx - bx * s);
-  const ty = Math.round(cy - by * s);
-  return `translate(${tx} ${ty}) scale(${s.toFixed(4)})`;
-}
-
-function figureBounds(layout: ResolvedLayout): { x: number; y: number; width: number; height: number } | null {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  const add = (x: number, y: number, w = 0, h = 0) => {
-    x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + w); y1 = Math.max(y1, y + h);
-  };
-  for (const r of layout.lanes.values()) add(r.x, r.y, r.width, r.height);
-  for (const r of layout.groups.values()) add(r.x, r.y, r.width, r.height);
-  for (const n of layout.nodes.values()) add(n.x, n.y, n.w, n.h);
-  for (const e of layout.edges.values()) {
-    for (const p of e.points) add(p.x, p.y);
-    if (e.label) add(e.label.box.x, e.label.box.y, e.label.box.width, e.label.box.height);
-    add(e.badgeAt.x - 16, e.badgeAt.y - 16, 32, 32);
-  }
-  if (!Number.isFinite(x0)) return null;
-  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
-}
-
-/** 静止表示で同じ辺に同じ中身の粒子が複数乗るとき、ラベルは 1 つだけ出す。 */
-function particlesForDisplay(frame: FrameState): FrameState['particles'] {
+/** 静止表示では、辺にラベルがあれば粒子のラベルは出さない（同じ語が二重に出るため）。 */
+function particlesForDisplay(frame: FrameState, diagram: Diagram): FrameState['particles'] {
   if (frame.mode !== 'static') return frame.particles;
-  const seen = new Set<string>();
-  return frame.particles.map((p) => {
-    const key = `${p.edge ?? ''}|${p.payload.kind}|${p.payload.label ?? ''}`;
-    if (!p.edge || !seen.has(key)) {
-      seen.add(key);
-      return p;
-    }
-    return { ...p, payload: { ...p.payload, label: undefined } };
-  });
+  const labeled = new Set(diagram.edges.filter((e) => e.label).map((e) => e.id));
+  return frame.particles.map((p) => (p.edge && labeled.has(p.edge) ? { ...p, payload: { ...p.payload, label: undefined } } : p));
 }
 
 function ctxKeyOf(ctx: ReturnType<typeof makeCtx>): string {

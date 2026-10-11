@@ -591,8 +591,11 @@ class Router {
     const axis: 'x' | 'y' = Math.abs(d.x) >= Math.abs(d.y) ? 'x' : 'y';
     let n = { x: d.y, y: -d.x };
     const badge = (nn: Pt): Pt => ({ x: pt.x - nn.x * BADGE_GAP, y: pt.y - nn.y * BADGE_GAP });
-    // ラベルが無い辺では進行方向の左手側（右向きなら上）に置き、下側は粒子のラベルに空けておく
-    if (!e.label) return { badgeAt: { x: pt.x + n.x * BADGE_GAP, y: pt.y + n.y * BADGE_GAP }, axis };
+    // ラベルが無い辺では画面の上側（縦の線なら左側）に置き、下側は粒子のラベルに空けておく
+    if (!e.label) {
+      const up = n.y < -0.01 || (Math.abs(n.y) <= 0.01 && n.x < 0) ? n : { x: -n.x, y: -n.y };
+      return { badgeAt: { x: pt.x + up.x * BADGE_GAP, y: pt.y + up.y * BADGE_GAP }, axis };
+    }
 
     const font = this.style.font.edge;
     const offset = font.size * 0.9;

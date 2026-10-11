@@ -60,9 +60,10 @@ export function DiagramPlayer({ diagram, skin, model, debug, showCaption, width,
   const state = useTransport(transport);
   const measure = useMemo(() => freshMeasurer(`${skin.id}:${model.fontStatus}`), [skin.id, model.fontStatus]);
 
+  const labeledEdges = useMemo(() => new Set(diagram.edges.filter((e) => e.label).map((e) => e.id)), [diagram]);
   const frame = useMemo(
-    () => (state.mode === 'static' ? sampleStatic(timeline) : sampleAt(timeline, state.t)),
-    [timeline, state.mode, state.t],
+    () => (state.mode === 'static' ? sampleStatic(timeline, { labeledEdges }) : sampleAt(timeline, state.t)),
+    [timeline, state.mode, state.t, labeledEdges],
   );
 
   useEffect(() => {

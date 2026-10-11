@@ -109,7 +109,11 @@ function badgeOnRoute(geom: EdgeGeom, at: number): Pt {
   const len = Math.hypot(dx, dy);
   if (len === 0) return geom.badgeAt;
   const left = { x: p.x + (dy / len) * BADGE_OFFSET, y: p.y - (dx / len) * BADGE_OFFSET };
-  if (!geom.label) return left;
+  if (!geom.label) {
+    // 画面の上側（縦の線なら左側）に寄せる。粒子のラベルは下に出るため
+    const goesDown = left.y > p.y + 0.01 || (Math.abs(left.y - p.y) <= 0.01 && left.x > p.x);
+    return goesDown ? { x: 2 * p.x - left.x, y: 2 * p.y - left.y } : left;
+  }
   // ラベルがある辺では、ラベルと反対側に置く
   const right = { x: p.x - (dy / len) * BADGE_OFFSET, y: p.y + (dx / len) * BADGE_OFFSET };
   const lp = geom.label.pos;

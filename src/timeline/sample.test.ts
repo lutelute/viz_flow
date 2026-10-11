@@ -137,15 +137,15 @@ describe('sampleStatic', () => {
     expect(f.particles.map((p) => p.edge).sort()).toEqual(['ab', 'bc', 'cd', 'de']);
     for (const p of f.particles) {
       const g = layout.edges.get(p.edge!)!;
-      expect(p.phaseT).toBe(0.62);
-      expect(p.x).toBeCloseTo(g.points[0].x + (g.points[1].x - g.points[0].x) * 0.62);
+      expect(p.phaseT).toBe(0.5);
+      expect(p.x).toBeCloseTo(g.points[0].x + (g.points[1].x - g.points[0].x) * 0.5);
       expect(p.phase).toBe('travel');
     }
     expect(Object.values(f.badges)).toEqual(['done', 'done', 'done']);
     for (const n of Object.values(f.nodes)) expect(n.phase).toBe('pending');
   });
 
-  it('同じエッジに複数なら 28 / 50 / 72 % に並べる', () => {
+  it('同じエッジに複数あっても最初の 1 つだけを置く', () => {
     const steps: Step[] = [
       {
         n: 1,
@@ -159,8 +159,8 @@ describe('sampleStatic', () => {
     ];
     const { tl } = compiled(steps);
     const f = sampleStatic(tl);
-    expect(f.particles.map((p) => p.phaseT)).toEqual([0.28, 0.5, 0.72]);
-    expect(f.particles.map((p) => p.id)).toEqual(['x', 'y', 'z']);
+    expect(f.particles.map((p) => p.phaseT)).toEqual([0.5]);
+    expect(f.particles.map((p) => p.id)).toEqual(['x']);
   });
 
   it('同じ粒子が同じエッジを繰り返し通っても 1 つにまとめる', () => {

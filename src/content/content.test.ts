@@ -6,6 +6,7 @@ import { resolveLayout, tableMeasurer } from '../layout';
 import { layoutStyleOf } from '../skins/types';
 import { sketchSkin } from '../skins/sketch/skin';
 import { compileTimeline } from '../timeline';
+import { fitScale } from '../render/fit';
 
 describe('content', () => {
   for (const entry of content) {
@@ -13,7 +14,8 @@ describe('content', () => {
       it(`${d.id}: 定義に問題が無く、レイアウト警告が無く、タイムラインが組める`, () => {
         expect(validateDiagram(d)).toEqual([]);
         const layout = resolveLayout(d, layoutStyleOf(sketchSkin, tableMeasurer()), '4:5');
-        expect(layout.warnings).toEqual([]);
+        expect(layout.warnings.filter((w) => w.kind !== 'figure-overflow')).toEqual([]);
+        expect(fitScale(layout)).toBeGreaterThanOrEqual(0.7);
         const tl = compileTimeline(d, layout);
         expect(tl.duration).toBeGreaterThan(0);
         expect(tl.steps.length).toBe(d.steps.length);

@@ -1,0 +1,57 @@
+/* UI の外枠の色・字・間隔。図の様式には追従させず、中立の色にする。 */
+:root {
+  --ui-font: "BIZ UDPGothic", system-ui, sans-serif;
+  --ui-size: 14px;
+  --ui-size-sm: 12.5px;
+  --ui-size-lg: 16px;
+  --ui-line-height: 1.6;
+
+  --ui-bg: #efede8;
+  --ui-surface: #faf9f6;
+  --ui-surface-2: #e6e3dc;
+  --ui-ink: #211f1c;
+  --ui-ink-soft: #645e55;
+  --ui-ink-faint: #8f887c;
+  --ui-line: #cdc8bd;
+  --ui-line-soft: #dedad1;
+  --ui-accent: #2a5a95;
+  --ui-accent-soft: #d8e3f1;
+  --ui-on-accent: #ffffff;
+  --ui-focus: #2a5a95;
+  --ui-mark: #cf7a22;
+
+  --ui-radius: 6px;
+  --ui-gap: 8px;
+  --ui-pad: 12px;
+  --ui-gallery-w: 260px;
+  --ui-panel-w: 320px;
+  --ui-transition: 120ms ease;
+  --ui-shadow: 0 1px 0 var(--ui-line-soft);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --ui-bg: #1c1c1f;
+  --ui-surface: #252529;
+  --ui-surface-2: #303036;
+  --ui-ink: #ebe9e3;
+  --ui-ink-soft: #aaa69d;
+  --ui-ink-faint: #7d786f;
+  --ui-line: #44444b;
+  --ui-line-soft: #36363c;
+  --ui-accent: #8fb5ea;
+  --ui-accent-soft: #2b3b52;
+  --ui-on-accent: #141418;
+  --ui-focus: #8fb5ea;
+  --ui-mark: #e6a35a;
+  --ui-shadow: 0 1px 0 #141416;
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-transition: 0s;
+  }
+}

@@ -7,12 +7,6 @@ import type { CompiledStep, CompiledTimeline, FrameState, NodeState, ParticleFra
 const PULSE_SEC = 0.5;
 
 /** 静止画で同じエッジに複数の粒子を載せるときの位置 */
-const STATIC_SLOTS: Record<number, number[]> = {
-  1: [0.62],
-  2: [0.3, 0.72],
-  3: [0.28, 0.5, 0.72],
-};
-
 export function stepIndexAt(tl: CompiledTimeline, t: number): number {
   const steps = tl.steps;
   if (steps.length === 0) return -1;
@@ -187,20 +181,21 @@ export function sampleAt(tl: CompiledTimeline, t: number): FrameState {
   return { t, mode: 'animated', stepIndex, stepProgress, particles, nodes, edges, badges };
 }
 
-function staticSlots(count: number): number[] {
-  const fixed = STATIC_SLOTS[count];
-  if (fixed) return fixed;
-  const out: number[] = [];
-  for (let i = 0; i < count; i++) out.push(0.3 + (0.4 * i) / (count - 1));
-  return out;
-}
-
 /**
  * 全 travel を経路の途中に置いた 1 枚絵。
  * 同じ粒子が同じエッジを何度も通る（ループ）ときは 1 つにまとめる。
  * 止まっている粒子と消えた粒子は置かない。
  */
-export function sampleStatic(tl: CompiledTimeline): FrameState {
+export interface StaticOptions {
+  /** ラベルのある辺。粒子をラベルの先（72%）に置いて重ならないようにする */
+  labeledEdges?: Set<string>;
+}
+
+/**
+ * 全ステップを 1 枚に畳んだ静止表示。各辺に粒子を 1 つだけ置く（最初に通ったもの）。
+ * 参考図と同じ「矢印に記号が載った絵」になる。
+ */
+export function sampleStatic(tl: CompiledTimeline, opt: StaticOptions = {}): FrameState {
   const byEdge = new Map<string, Array<{ id: string; route: Route; payload: Payload }>>();
   for (const p of tl.particles) {
     const seen = new Set<string>();
@@ -216,13 +211,11 @@ export function sampleStatic(tl: CompiledTimeline): FrameState {
 
   const particles: ParticleFrame[] = [];
   for (const [edge, items] of byEdge) {
-    const slots = staticSlots(items.length);
-    items.forEach((item, i) => {
-      const u = slots[i];
-      const pos = posAt(item.route, u);
-      particles.push({
-        id: item.id, x: pos.x, y: pos.y, heading: headingAt(item.route, u), payload: item.payload, phase: 'travel', phaseT: u, edge,
-      });
+    const item = items[0];
+    const u = opt.labeledEdges?.has(edge) ? 0.72 : 0.5;
+    const pos = posAt(item.route, u);
+    particles.push({
+      id: item.id, x: pos.x, y: pos.y, heading: headingAt(item.route, u), payload: item.payload, phase: 'travel', phaseT: u, edge,
     });
   }
 

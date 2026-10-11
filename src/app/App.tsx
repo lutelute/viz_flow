@@ -1,97 +1,231 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { findComposition } from '../content';
 import { diagramsOf } from '../model/diagram';
-import type { FrameAspect } from '../layout/types';
-import { getSkin } from '../skins';
-import { DiagramPlayer, usePlayerModel } from '../render/DiagramPlayer';
+import { getSkin, skinList, type SkinId } from '../skins';
+import { fontsHref } from '../skins/fonts';
+import type { FontSpec } from '../skins/types';
+import { usePlayerModel } from '../render/DiagramPlayer';
 import { useTransport } from '../render/useTransport';
+import { stepIndexAt } from '../timeline';
+import type { TransportState } from '../timeline/transport';
+import type { CompiledTimeline } from '../timeline/types';
 import { usePrefersReducedMotion } from '../core/a11y';
 import { S } from './strings';
+import { pendingOf, shellStore, useShell } from './store';
+import { flushUrlWrite, onPopState, scheduleUrlWrite } from './url-state';
+import { useShellKeys } from './keyboard';
+import { useMediaQuery } from './use-media';
+import { useShare } from './use-share';
+import { Gallery, GalleryDrawer } from './Gallery';
+import { Stage } from './Stage';
+import { Transport } from './Transport';
+import { StepList } from './StepList';
+import { CaptionPanel } from './CaptionPanel';
+import { SourceNote } from './SourceNote';
+import { StyleSwitch } from './StyleSwitch';
+import { ThemeToggle } from './ThemeToggle';
+import { ShareButton } from './ShareButton';
+import { ExportDialog } from './ExportDialog';
+import { HelpDialog } from './HelpDialog';
+import './tokens.css';
+import './shell.css';
 
-// M1〜M2 の作業用シェル。本番のシェル（ギャラリー・パネル・書き出し）は M4 で置き換える。
+const NARROW = '(max-width: 1099px)';
+const UI_FONT_LINK_ID = 'ui-fonts';
+const UI_FONTS: FontSpec[] = [{ family: 'BIZ UDPGothic', googleId: 'BIZ+UDPGothic', weights: [400, 700] }];
 
-export function App(): ReactNode {
-  const params = new URLSearchParams(window.location.search);
-  const composition = findComposition(params.get('t'));
-  const skin = getSkin(params.get('style'));
-  const frame = (params.get('size') ?? 'free') as FrameAspect;
-  const debug = params.get('debug') === '1';
-  const reduced = usePrefersReducedMotion();
+function ensureUiFonts(): void {
+  if (document.getElementById(UI_FONT_LINK_ID)) return;
+  const link = document.createElement('link');
+  link.id = UI_FONT_LINK_ID;
+  link.rel = 'stylesheet';
+  link.href = fontsHref(UI_FONTS);
+  document.head.appendChild(link);
+}
+
+/**
+ * 様式やフォントの読み込みで Transport が作り直されるときに持ち越す状態。
+ * 秒ではなく「どのステップの何割か」で持つと、タイムラインの長さが少し変わっても同じ場面に戻れる。
+ */
+interface Carry {
+  templateId: string;
+  mode: TransportState['mode'];
+  rate: number;
+  loop: boolean;
+  stepIndex: number;
+  frac: number;
+  t: number;
+}
+
+function carryOf(templateId: string, tl: CompiledTimeline, st: TransportState): Carry {
+  const i = stepIndexAt(tl, st.t);
+  const s = tl.steps[i];
+  const len = s ? s.t1 - s.t0 : 0;
+  const frac = s && len > 0 ? Math.min(1, Math.max(0, (st.t - s.t0) / len)) : 0;
+  return { templateId, mode: st.mode, rate: st.rate, loop: st.loop, stepIndex: i, frac, t: st.t };
+}
+
+function restoreT(tl: CompiledTimeline, c: Carry): number {
+  const s = tl.steps[c.stepIndex];
+  if (!s) return c.t;
+  return s.t0 + c.frac * (s.t1 - s.t0);
+}
+
+type DialogId = 'none' | 'export' | 'help' | 'gallery';
+
+export function App() {
+  const { templateId, styleId, theme, postFrame, debug, pending } = useShell();
+  const composition = findComposition(templateId);
+  const skin = getSkin(styleId);
   const diagram = diagramsOf(composition)[0];
-  const autoplay = !reduced && params.get('static') !== '1';
+  const reduced = usePrefersReducedMotion();
+  const narrow = useMediaQuery(NARROW);
+  const dark = theme ? theme === 'dark' : skin.tokens.dark;
 
-  const model = usePlayerModel(diagram, skin, frame, autoplay);
-  const state = useTransport(model.transport);
-  const at = params.get('at');
+  const model = usePlayerModel(diagram, skin, postFrame ? '4:5' : 'free', !reduced);
+  const { transport, timeline } = model;
+  const state = useTransport(transport);
+  const stepIndex = Math.max(0, stepIndexAt(timeline, state.t));
+  const currentStep = state.mode === 'static' ? -1 : stepIndex;
+
+  const [dialog, setDialog] = useState<DialogId>('none');
+  const closeDialog = useCallback(() => setDialog('none'), []);
+
   useEffect(() => {
-    if (at != null) model.transport.seek(Number(at));
-  }, [at, model.transport]);
-  const [showCaption, setShowCaption] = useState(frame !== 'free');
-  const t = model.transport;
-  const steps = model.timeline.steps;
-  const stepIdx = Math.max(0, steps.findIndex((s) => state.t >= s.t0 && state.t < s.t1));
+    ensureUiFonts();
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  }, [dark]);
+
+  useEffect(
+    () => onPopState((u) => shellStore.set({ templateId: u.t, styleId: u.style, theme: u.theme, debug: u.debug, pending: pendingOf(u) })),
+    [],
+  );
+
+  const carryRef = useRef<Carry | null>(null);
+  useEffect(() => {
+    carryRef.current = carryOf(templateId, timeline, state);
+  }, [templateId, timeline, state]);
+
+  useLayoutEffect(() => {
+    const c = carryRef.current;
+    if (!c || c.templateId !== templateId) return;
+    if (shellStore.get().pending) return;
+    transport.setRate(c.rate);
+    transport.setLoop(c.loop);
+    transport.seek(restoreT(transport.timeline, c));
+    if (c.mode === 'play') transport.play();
+    else if (c.mode === 'static') transport.pause();
+  }, [transport, templateId]);
+
+  useLayoutEffect(() => {
+    if (!pending) return;
+    if (pending.step != null) transport.seekStep(pending.step - 1);
+    else if (pending.at != null) transport.seek(pending.at);
+    if (pending.static) transport.pause();
+    shellStore.set({ pending: null });
+  }, [pending, transport]);
+
+  useEffect(() => {
+    scheduleUrlWrite({ t: templateId, style: styleId, theme, step: state.mode === 'scrub' ? stepIndex + 1 : null, debug });
+  }, [templateId, styleId, theme, debug, state.mode, stepIndex]);
+
+  const pickTemplate = useCallback(
+    (id: string) => {
+      shellStore.set({ templateId: id, pending: null });
+      setDialog('none');
+    },
+    [],
+  );
+  const pickStyle = useCallback((id: SkinId) => shellStore.set({ styleId: id }), []);
+  const toggleTheme = useCallback(() => shellStore.set({ theme: dark ? 'light' : 'dark' }), [dark]);
+  const setPostFrame = useCallback((on: boolean) => shellStore.set({ postFrame: on }), []);
+
+  const getUrl = useCallback(() => {
+    flushUrlWrite();
+    return window.location.href;
+  }, []);
+  const share = useShare(getUrl);
+
+  useShellKeys({
+    togglePlay: () => (transport.getState().mode === 'play' ? transport.pause() : transport.play()),
+    prevStep: () => transport.prev(),
+    nextStep: () => transport.next(),
+    nudge: (sec) => transport.seek(transport.getState().t + sec),
+    home: () => transport.seek(0),
+    end: () => transport.seekStep(timeline.steps.length - 1),
+    pickStyle: (i) => {
+      const s = skinList[i];
+      if (s) pickStyle(s.id);
+    },
+    toggleTheme,
+    openExport: () => setDialog('export'),
+    copyUrl: () => void share.copy(),
+    openHelp: () => setDialog('help'),
+    close: closeDialog,
+  });
 
   return (
-    <div style={{ minHeight: '100vh', background: skin.tokens.bg, color: skin.tokens.ink, fontFamily: `"${skin.tokens.font.caption.family}"`, padding: 16 }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12, fontSize: 15 }}>
-        <strong>{S.appTitle}</strong>
-        <span>{diagram.title}</span>
-        <span>様式: {skin.name}</span>
-        <span>{model.fontStatus === 'ready' ? '' : model.fontStatus === 'loading' ? S.fonts.loading : S.fonts.fallback}</span>
-        <a href={S.legacy.link} style={{ marginLeft: 'auto', color: skin.tokens.inkSoft }}>{S.legacy.note}</a>
-      </div>
-
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 720px', maxWidth: 1080 }}>
-          <DiagramPlayer diagram={diagram} skin={skin} model={model} debug={debug} showCaption={showCaption} width="100%" height="auto" />
+    <div className="shell">
+      <header className="top">
+        <h1 className="top__title">{S.appTitle}</h1>
+        {narrow && (
+          <button type="button" className="ui-btn" onClick={() => setDialog('gallery')}>
+            {S.gallery.open}
+          </button>
+        )}
+        <StyleSwitch value={styleId} onChange={pickStyle} />
+        <div className="top__group top__right">
+          <ThemeToggle dark={dark} onToggle={toggleTheme} />
+          <ShareButton status={share.status} url={share.url} onCopy={() => void share.copy()} />
+          <button type="button" className="ui-btn" onClick={() => setDialog('export')}>
+            {S.nav.export}
+          </button>
+          <button type="button" className="ui-btn" onClick={() => setDialog('help')}>
+            {S.nav.help}
+          </button>
         </div>
-        <aside style={{ flex: '1 1 260px', minWidth: 240, fontSize: 15, lineHeight: 1.6 }}>
-          <div style={{ marginBottom: 8 }}>{S.panel.steps}</div>
-          <ol style={{ margin: 0, paddingLeft: 24 }}>
-            {steps.map((s) => (
-              <li key={s.index} style={{ fontWeight: state.mode !== 'static' && s.index === stepIdx ? 700 : 400, marginBottom: 4 }}>
-                <button
-                  onClick={() => t.seekStep(s.index)}
-                  style={{ all: 'unset', display: 'block', cursor: 'pointer', color: 'inherit', textAlign: 'left' }}
-                >
-                  {s.caption}
-                </button>
-              </li>
-            ))}
-          </ol>
-          {state.mode === 'static' && <p style={{ color: skin.tokens.inkSoft }}>{S.panel.static}</p>}
-          {reduced && <p style={{ color: skin.tokens.inkSoft }}>{S.reducedMotion}</p>}
-        </aside>
-      </div>
+      </header>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12, fontSize: 15 }}>
-        <button onClick={() => (state.mode === 'play' ? t.pause() : t.play())}>{state.mode === 'play' ? S.transport.pause : S.transport.play}</button>
-        <button onClick={() => t.prev()}>{S.transport.prev}</button>
-        <button onClick={() => t.next()}>{S.transport.next}</button>
-        <label>
-          {S.transport.seek}
-          <input
-            type="range"
-            min={0}
-            max={model.timeline.duration}
-            step={1 / 30}
-            value={state.t}
-            onChange={(e) => t.seek(Number(e.target.value))}
-            style={{ width: 260, verticalAlign: 'middle', marginLeft: 6 }}
-          />
-        </label>
-        <span>{state.t.toFixed(1)} / {model.timeline.duration.toFixed(1)} 秒</span>
-        <label>
-          {S.transport.rate}
-          <select value={state.rate} onChange={(e) => t.setRate(Number(e.target.value))} style={{ marginLeft: 6 }}>
-            {[0.5, 0.75, 1, 1.5, 2].map((r) => <option key={r} value={r}>{r}×</option>)}
-          </select>
-        </label>
-        <label>
-          <input type="checkbox" checked={showCaption} onChange={(e) => setShowCaption(e.target.checked)} /> キャプション帯
-        </label>
-        <span style={{ color: skin.tokens.inkSoft }}>警告 {model.layout.warnings.length} 件</span>
-      </div>
+      {!narrow && (
+        <aside className="gallery">
+          <Gallery value={templateId} onChange={pickTemplate} />
+        </aside>
+      )}
+
+      <Stage
+        diagram={diagram}
+        skin={skin}
+        model={model}
+        postFrame={postFrame}
+        onPostFrame={setPostFrame}
+        debug={debug}
+        reducedNote={reduced && state.mode !== 'play'}
+        onPlay={() => transport.play()}
+        fitWidth={narrow}
+      />
+
+      <Transport transport={transport} timeline={timeline} state={state} stepIndex={stepIndex} />
+
+      <aside className="panel" aria-label={S.panel.title}>
+        <StepList steps={timeline.steps} current={currentStep} onPick={(i) => transport.seekStep(i)} />
+        <CaptionPanel step={timeline.steps[stepIndex] ?? null} isStatic={state.mode === 'static'} />
+        <SourceNote sources={diagram.sources} />
+      </aside>
+
+      {narrow && <GalleryDrawer open={dialog === 'gallery'} onClose={closeDialog} value={templateId} onChange={pickTemplate} />}
+      <ExportDialog
+        open={dialog === 'export'}
+        onClose={closeDialog}
+        templateId={templateId}
+        styleId={styleId}
+        steps={timeline.steps}
+        duration={timeline.duration}
+        currentT={dialog === 'export' ? state.t : 0}
+      />
+      <HelpDialog open={dialog === 'help'} onClose={closeDialog} />
     </div>
   );
 }
