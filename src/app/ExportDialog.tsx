@@ -3,6 +3,7 @@ import type { CompiledStep } from '../timeline/types';
 import { S } from './strings';
 import { useDialog } from './use-dialog';
 import { CloseIcon } from './Icons';
+import type { ExportJob } from './use-export';
 import {
   EXPORT_SIZES,
   exportCommand,
@@ -27,13 +28,22 @@ export interface ExportDialogProps {
    * src/export/run.ts が入ったらここに差し込む。
    */
   onExport?: (req: ExportRequest) => void | Promise<void>;
+  /** ブラウザ内書き出しの進捗と結果 */
+  job?: ExportJob;
+  onCancel?: () => void;
+  onDownload?: () => void;
+  onShare?: () => Promise<boolean>;
+  onRetryWithoutFonts?: () => void;
+  canShare?: boolean;
 }
 
 const LOOPS = [1, 2, 3];
 const SHOW_MS = 2000;
 
 export function ExportDialog(props: ExportDialogProps) {
-  const { open, onClose, templateId, styleId, steps, duration, currentT, onExport } = props;
+  const { open, onClose, templateId, styleId, steps, duration, currentT, onExport, job, onCancel, onDownload, onShare, onRetryWithoutFonts, canShare } = props;
+  const [shareNote, setShareNote] = useState('');
+  const running = job?.phase === 'running';
   const ref = useDialog(open, onClose);
   const [format, setFormat] = useState<ExportFormat>('png');
   const [size, setSize] = useState<ExportSize>('4x5');
@@ -169,18 +179,83 @@ export function ExportDialog(props: ExportDialogProps) {
           </>
         )}
 
-        <div className="dlg__row">
-          <label className="dlg__label" htmlFor="export-out">
-            {S.export.outDir}
-          </label>
-          <input id="export-out" className="dlg__input" type="text" value={outDir} onChange={(e) => setOutDir(e.target.value)} />
-        </div>
+        {!onExport && (
+          <div className="dlg__row">
+            <label className="dlg__label" htmlFor="export-out">
+              {S.export.outDir}
+            </label>
+            <input id="export-out" className="dlg__input" type="text" value={outDir} onChange={(e) => setOutDir(e.target.value)} />
+          </div>
+        )}
 
         <div className="dlg__row">
           <span className="dlg__label">{S.export.fileName}</span>
           <span>{exportFileName(req)}</span>
         </div>
 
+        {job && job.phase !== 'idle' && (
+          <div className="dlg__status" aria-live="polite">
+            {job.phase === 'running' && job.progress && (
+              <>
+                <p className="ui-note">
+                  {S.export.running}。{S.export.phase[job.progress.phase]}。{S.export.stayOnTab}
+                </p>
+                <progress className="dlg__progress" max={job.progress.total} value={job.progress.done} />
+                <p className="ui-status">
+                  {job.progress.phase === 'fonts' ? '' : S.export.progress(job.progress.done, job.progress.total, Math.round(job.progress.etaSec ?? 0))}
+                </p>
+                <p className="ui-field dlg__actions">
+                  <button type="button" className="ui-btn" onClick={onCancel}>
+                    {S.export.cancel}
+                  </button>
+                </p>
+              </>
+            )}
+            {job.phase === 'done' && job.result && (
+              <>
+                <p className="ui-note">
+                  {S.export.done}: {job.result.filename}
+                  {job.result.fallback ? `（${S.export.fallbackWebm}）` : ''}
+                </p>
+                <p className="ui-field dlg__actions">
+                  <button type="button" className="ui-btn ui-btn--primary" onClick={onDownload}>
+                    {S.export.download}
+                  </button>
+                  {canShare && onShare && (
+                    <button
+                      type="button"
+                      className="ui-btn"
+                      onClick={async () => setShareNote((await onShare()) ? S.export.shared : S.export.shareFailed)}
+                    >
+                      {S.export.share}
+                    </button>
+                  )}
+                  <span className="ui-status">{shareNote}</span>
+                </p>
+              </>
+            )}
+            {job.phase === 'error' && job.error && (
+              <>
+                <p className="ui-note">
+                  {job.error.code === 'aborted'
+                    ? S.export.aborted
+                    : job.error.code === 'font-fetch-failed'
+                      ? S.export.fontFail
+                      : job.error.code === 'no-video-encoder'
+                        ? S.export.noH264
+                        : `${S.export.failed}: ${job.error.message}`}
+                </p>
+                {job.error.code === 'font-fetch-failed' && onRetryWithoutFonts && (
+                  <p className="ui-field dlg__actions">
+                    <button type="button" className="ui-btn" onClick={onRetryWithoutFonts}>
+                      {S.export.retryNoFonts}
+                    </button>
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
         {shown && !onExport && (
           <div>
             <p className="ui-note">{S.export.commandNote}</p>
@@ -200,7 +275,7 @@ export function ExportDialog(props: ExportDialogProps) {
         <button type="button" className="ui-btn" onClick={onClose}>
           {S.export.close}
         </button>
-        <button type="button" className="ui-btn ui-btn--primary" onClick={run}>
+        <button type="button" className="ui-btn ui-btn--primary" onClick={run} disabled={running}>
           {S.export.run}
         </button>
       </div>

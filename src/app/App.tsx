@@ -16,6 +16,7 @@ import { flushUrlWrite, onPopState, scheduleUrlWrite } from './url-state';
 import { useShellKeys } from './keyboard';
 import { useMediaQuery } from './use-media';
 import { useShare } from './use-share';
+import { useBrowserExport } from './use-export';
 import { Gallery, GalleryDrawer } from './Gallery';
 import { Stage } from './Stage';
 import { Transport } from './Transport';
@@ -75,6 +76,7 @@ function restoreT(tl: CompiledTimeline, c: Carry): number {
 type DialogId = 'none' | 'export' | 'help' | 'gallery';
 
 export function App() {
+  const browserExport = useBrowserExport();
   const { templateId, styleId, theme, postFrame, debug, pending } = useShell();
   const composition = findComposition(templateId);
   const skin = getSkin(styleId);
@@ -222,12 +224,22 @@ export function App() {
       {narrow && <GalleryDrawer open={dialog === 'gallery'} onClose={closeDialog} value={templateId} onChange={pickTemplate} />}
       <ExportDialog
         open={dialog === 'export'}
-        onClose={closeDialog}
+        onClose={() => {
+          browserExport.reset();
+          closeDialog();
+        }}
         templateId={templateId}
         styleId={styleId}
         steps={timeline.steps}
         duration={timeline.duration}
         currentT={dialog === 'export' ? state.t : 0}
+        onExport={(req) => browserExport.start(req)}
+        job={browserExport.job}
+        onCancel={browserExport.cancel}
+        onDownload={browserExport.download}
+        onShare={browserExport.share}
+        onRetryWithoutFonts={browserExport.retryWithoutFonts}
+        canShare={browserExport.canShare}
       />
       <HelpDialog open={dialog === 'help'} onClose={closeDialog} />
     </div>
