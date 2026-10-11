@@ -17,6 +17,7 @@ import { network } from './infra/network';
 import { dataPipeline } from './data/pipeline';
 import { researchProcess } from './research/process';
 import { layers } from './layers';
+import { firstDiagrams } from './first';
 
 export interface ContentEntry {
   composition: Composition;
@@ -27,6 +28,7 @@ export interface ContentEntry {
 }
 
 export const LAYER_GROUP = '部品の中';
+export const FIRST_GROUP = '最初の版';
 
 const rag8 = [naiveRag, multimodalRag, hydeRag, correctiveRag, graphRag, hybridRag, adaptiveRag, agenticRag];
 
@@ -52,6 +54,7 @@ export const content: ContentEntry[] = [
   { group: '仕組み', composition: { kind: 'single', id: network.id, diagram: network } },
   { group: '仕組み', composition: { kind: 'single', id: dataPipeline.id, diagram: dataPipeline } },
   { group: '仕組み', composition: { kind: 'single', id: researchProcess.id, diagram: researchProcess } },
+  ...firstDiagrams.map((diagram) => ({ group: FIRST_GROUP, composition: { kind: 'single', id: diagram.id, diagram } as Composition })),
   ...layers.map((diagram) => ({ group: LAYER_GROUP, layer: true, composition: { kind: 'single', id: diagram.id, diagram } as Composition })),
 ];
 
