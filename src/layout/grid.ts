@@ -186,7 +186,8 @@ function shiftPlacement(p: Placement, dx: number, dy: number): Placement {
 export function resolveLayout(diagram: Diagram, style: LayoutStyle, frame: FrameAspect = 'free'): ResolvedLayout {
   const warnings: LayoutWarning[] = [];
   const hints = diagram.layout ?? {};
-  const pad = hints.padding ?? style.grid.padding;
+  // 投稿枠には枠自身の余白があるので、グリッドの余白は free 枠だけに付ける
+  const pad = frame === 'free' ? (hints.padding ?? style.grid.padding) : 0;
   const laneGap = hints.laneGap ?? style.grid.laneGap;
   const laneOrder = diagram.lanes.map((l) => l.id);
   const laneSet = new Set(laneOrder);

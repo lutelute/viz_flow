@@ -382,13 +382,18 @@ function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
     scale = 1 - pf.phaseT;
   }
   if (scale <= 0.02) return null;
+  // ノードの中で待つ間はラベルと重ならないよう箱の左上寄りに小さく置く
+  const docked = pf.phase !== 'travel';
+  const dx = docked ? -50 : 0;
+  const dy = docked ? -34 : 0;
+  if (docked) scale *= 0.75;
   const sym = `pl-sketch-${shown.kind}${shown.ghost ? '-ghost' : ''}`;
   // ノードの中にいる間はノードのラベルと重なるので、粒子のラベルは移動中だけ出す
   const label = pf.phase === 'travel' ? shown.label : undefined;
   const stacked = shown.kind === 'chunks' && (shown.count ?? 1) >= 3;
 
   return (
-    <g transform={`translate(${pf.x} ${pf.y}) scale(${scale * k})`}>
+    <g transform={`translate(${pf.x + dx} ${pf.y + dy}) scale(${scale * k})`}>
       {stacked && <use href={`#${sym}`} transform="translate(5 -5)" />}
       <use href={`#${sym}`} />
       {label && scale > 0.6 && (

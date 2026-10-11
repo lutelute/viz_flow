@@ -1,10 +1,13 @@
 import { LegacyApp } from './LegacyApp';
 import { App as NewApp } from './app/App';
+import { ExportRoute } from './app/ExportRoute';
 
-const legacy = new URLSearchParams(window.location.search).get('legacy') === '1';
+const params = new URLSearchParams(window.location.search);
 
 function App() {
-  return legacy ? <LegacyApp /> : <NewApp />;
+  if (params.get('legacy') === '1') return <LegacyApp />;
+  if (params.get('export') === '1') return <ExportRoute />;
+  return <NewApp />;
 }
 
 export default App;
