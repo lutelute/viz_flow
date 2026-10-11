@@ -1,10 +1,9 @@
-* {
+html, body, #root {
   margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  min-height: 100%;
 }
 
 body {
-  margin: 0;
-  background: #0a0a0f;
+  background: #f3f1ec;
+  -webkit-font-smoothing: antialiased;
 }

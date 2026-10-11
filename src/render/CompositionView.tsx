@@ -114,7 +114,7 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
     // 見出しと図を詰めて積み、全体を枠の中央に置く
     const n = model.cells.length;
     const gap = 40;
-    const headH = t.font.lane.size * 1.8;
+    const headH = t.font.lane.size * 2.4;
     const boxes = model.cells.map(boundsOf);
     const vertical = composition.direction === 'vertical';
     const sumH = boxes.reduce((a, b) => a + b.height, 0);
@@ -124,7 +124,7 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
       : Math.min((body.width - gap * (n - 1)) / boxes.reduce((a, b) => a + b.width, 0), (body.height - headH) / Math.max(...boxes.map((b) => b.height)), 1.1);
     if (vertical) {
       const total = sumH * scale + n * headH + gap * (n - 1);
-      let y = body.y + Math.max(0, (body.height - total) / 2);
+      let y = body.y + Math.min(120, Math.max(0, (body.height - total) / 2));
       boxes.forEach((box, i) => {
         slots.push({ rect: { x: body.x, y, width: body.width, height: headH + box.height * scale }, heading: composition.items[i].heading, scale, box });
         y += headH + box.height * scale + gap;
@@ -147,7 +147,7 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
       {skin.Title(ctx, { x: margin, y: 36, width: size.width - margin * 2, height: titleH }, composition.title)}
       {model.cells.map((cell, i) => {
         const slot = slots[i];
-        const headH = slot.heading ? t.font.lane.size * 1.8 : 0;
+        const headH = slot.heading ? t.font.lane.size * 2.4 : 0;
         const inner: Rect = { x: slot.rect.x, y: slot.rect.y + headH, width: slot.rect.width, height: slot.rect.height - headH };
         const s = slot.scale;
         const box = slot.box;

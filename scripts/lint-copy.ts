@@ -1,22 +1,11 @@
 // 文言と見た目の「生成 AI らしさ」を機械的に見つける。npm run lint:copy。
-// 旧コード（削除予定）は対象外にしている。消したら EXCLUDE から外すこと。
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
 const TARGETS = ['src', 'README.md', 'docs', 'index.html'];
 const EXCLUDE = [
-  'src/components/',
-  'src/core/themes.ts',
-  'src/core/path.ts',
   'src/core/a11y.ts',
-  'src/templates/',
-  'src/utils/',
-  'src/LegacyApp.tsx',
-  'src/App.css',
-  'src/index.css',
-  'docs/js-particle-engine.md',
-  'README.md',
 ];
 
 interface Rule { name: string; re: RegExp; only?: RegExp; skip?: RegExp }
