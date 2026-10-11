@@ -12,7 +12,7 @@ export const multimodalRag: Diagram = {
     { id: 'query', label: '質問に答える（そのつど）', tone: 'accent2', frame: 'band' },
   ],
   nodes: [
-    { id: 'imgs', kind: 'documents', label: '画像・図表', lane: 'index', col: 0, row: 0, emphasis: 'new' },
+    { id: 'imgs', kind: 'image', label: '画像・図表', lane: 'index', col: 0, row: 0, emphasis: 'new' },
     { id: 'txts', kind: 'documents', label: 'テキスト', lane: 'index', col: 0, row: 1 },
     { id: 'imgenc', kind: 'encoder', label: '画像\nエンコーダ', lane: 'index', col: 1, row: 0, emphasis: 'new' },
     { id: 'txtenc', kind: 'encoder', label: 'テキスト\nエンコーダ', lane: 'index', col: 1, row: 1 },

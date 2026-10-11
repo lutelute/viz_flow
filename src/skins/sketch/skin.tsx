@@ -43,7 +43,7 @@ const fill: Partial<Record<NodeKind, string>> = {
   documents: PASTEL.data, chunker: PASTEL.data, vectordb: PASTEL.data, graphdb: PASTEL.data, index: PASTEL.data, memory: PASTEL.data,
   embedding: PASTEL.model, encoder: PASTEL.model, llm: PASTEL.model, agent: PASTEL.model, policy: PASTEL.model,
   grader: PASTEL.control, router: PASTEL.control, reranker: PASTEL.control, retriever: PASTEL.control,
-  user: PASTEL.io, query: PASTEL.io, answer: PASTEL.io, prompt: PASTEL.io, web: PASTEL.io, tool: PASTEL.io,
+  user: PASTEL.io, query: PASTEL.io, answer: PASTEL.io, prompt: PASTEL.io, web: PASTEL.io, tool: PASTEL.io, image: PASTEL.io,
   generic: PASTEL.plain,
 };
 

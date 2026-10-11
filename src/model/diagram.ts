@@ -4,7 +4,7 @@
 export type NodeKind =
   | 'user' | 'query' | 'documents' | 'chunker' | 'embedding' | 'vectordb' | 'graphdb'
   | 'retriever' | 'reranker' | 'grader' | 'router' | 'prompt' | 'llm' | 'answer'
-  | 'web' | 'tool' | 'agent' | 'memory' | 'policy' | 'encoder' | 'index' | 'generic';
+  | 'web' | 'tool' | 'agent' | 'memory' | 'policy' | 'encoder' | 'index' | 'image' | 'generic';
 
 export type PayloadKind =
   | 'text' | 'query' | 'vector' | 'chunks' | 'prompt' | 'answer' | 'image'

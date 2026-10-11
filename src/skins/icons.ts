@@ -36,6 +36,7 @@ export const NODE_GLYPHS: Record<NodeKind, string[]> = {
   policy: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 12l4.5-4.5', 'M12 12v.2', 'M6 15h2M16 15h2'],
   encoder: ['M4 5h16l-5.5 6.5V18l-5 2.5v-9L4 5Z'],
   index: ['M4 7h16v13H4V7Z', 'M4 11h16', 'M8 7V4h8v3', 'M10 15h4'],
+  image: ['M4 5h16v14H4V5Z', 'M4 16l5-5 4 4 3-3 4 4', 'M15.5 9a1 1 0 1 0 0 .01Z'],
   generic: ['M5 5h14v14H5V5Z'],
 };
 

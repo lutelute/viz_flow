@@ -38,7 +38,7 @@ const PART_CODE: Record<NodeKind, string> = {
   documents: 'DOC', chunker: 'CHK', embedding: 'EMB', vectordb: 'VDB', graphdb: 'GDB',
   retriever: 'RET', reranker: 'RRK', grader: 'GRD', router: 'RTR', prompt: 'PRM',
   llm: 'LLM', answer: 'ANS', user: 'USR', query: 'QRY', web: 'WEB', tool: 'TOL',
-  agent: 'AGT', memory: 'MEM', policy: 'POL', encoder: 'ENC', index: 'IDX', generic: 'GEN',
+  agent: 'AGT', memory: 'MEM', policy: 'POL', encoder: 'ENC', index: 'IDX', generic: 'GEN', image: 'IMG',
 };
 
 const PAYLOAD_CODE: Record<PayloadKind, string> = {
