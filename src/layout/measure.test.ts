@@ -57,4 +57,17 @@ describe('wrapJa', () => {
   it('収まる文はそのまま 1 行', () => {
     expect(wrapJa('埋め込みモデル', em(10), measurer, font)).toEqual(['埋め込みモデル']);
   });
+
+  it('最後の行に 1〜2 字だけ残さない（行数は変えない）', () => {
+    // 幅 9 字で「正しい / 誤り / あいまい」を折ると、素朴には「あ」か「い」が 1 字だけ残る
+    const lines = wrapJa('正しい / 誤り / あいまい', em(9), measurer, font);
+    expect(lines.length).toBe(2);
+    expect(Array.from(lines[lines.length - 1].replace(/\s/g, '')).length).toBeGreaterThan(2);
+  });
+
+  it('すぐ手前に空白や読点があればそこで切り、語の途中で割らない', () => {
+    expect(wrapJa('正しい / 誤り / あいまい', em(9), measurer, font)[1]).toBe('あいまい');
+    expect(wrapJa('指示、資料、質問の順', em(7), measurer, font)).toEqual(['指示、資料、', '質問の順']);
+  });
 });
+

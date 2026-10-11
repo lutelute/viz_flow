@@ -92,6 +92,21 @@ function tokenize(paragraph: string): string[] {
   return atoms;
 }
 
+/** 行末に来てよい区切り。この直後で切ると語の途中で割れない */
+const SOFT_BREAK_AFTER = new Set([' ', '　', '、', '。', '，', '．', '）', '」', '・']);
+const SOFT_LOOKBACK = 5;
+
+/** cur の末尾 SOFT_LOOKBACK 個以内にある区切りの直後の位置。無ければ -1。前の行が半分より短くなるなら使わない。 */
+function softBreakIndex(cur: string[], width: (s: string) => number, maxWidth: number): number {
+  for (let k = cur.length - 1; k >= Math.max(1, cur.length - SOFT_LOOKBACK); k--) {
+    if (!SOFT_BREAK_AFTER.has(cur[k - 1]) || NO_LINE_START.has(cur[k]) || isSpace(cur[k])) continue;
+    const head = cur.slice(0, k).join('').trimEnd();
+    if (width(head) < maxWidth * 0.5) return -1;
+    return k;
+  }
+  return -1;
+}
+
 function wrapParagraph(paragraph: string, maxWidth: number, measurer: TextMeasurer, font: FontSpec): string[] {
   const width = (s: string) => measurer.width(s, font.family, font.size, font.weight);
   const atoms = tokenize(paragraph);
@@ -142,6 +157,9 @@ function wrapParagraph(paragraph: string, maxWidth: number, measurer: TextMeasur
     while (cur.length > 1 && NO_LINE_END.has(cur[cur.length - 1])) {
       atoms.splice(i, 0, cur.pop()!);
     }
+    // すぐ手前に空白や読点があれば、そこで切る（「質／問」より「、／質問」）
+    const k = softBreakIndex(cur, width, maxWidth);
+    if (k > 0) atoms.splice(i, 0, ...cur.splice(k));
     flush();
   }
   if (cur.length > 0 || lines.length === 0) flush();
@@ -155,9 +173,27 @@ function wrapParagraph(paragraph: string, maxWidth: number, measurer: TextMeasur
 export function wrapJa(text: string, maxWidth: number, measurer: TextMeasurer, font: FontSpec): string[] {
   const out: string[] = [];
   for (const paragraph of text.split('\n')) {
-    out.push(...wrapParagraph(paragraph, maxWidth, measurer, font));
+    out.push(...wrapBalanced(paragraph, maxWidth, measurer, font));
   }
   return out;
+}
+
+/** 最後の行がこの字数以下なら、行数を変えずに幅を詰めて折り直す（「あいま／い」を防ぐ）。 */
+const WIDOW = 2;
+
+function visibleChars(s: string): number {
+  return Array.from(s.replace(/\s/g, '')).length;
+}
+
+function wrapBalanced(paragraph: string, maxWidth: number, measurer: TextMeasurer, font: FontSpec): string[] {
+  const base = wrapParagraph(paragraph, maxWidth, measurer, font);
+  if (base.length < 2 || visibleChars(base[base.length - 1]) > WIDOW) return base;
+  for (let f = 0.95; f >= 0.6; f -= 0.05) {
+    const alt = wrapParagraph(paragraph, maxWidth * f, measurer, font);
+    if (alt.length !== base.length) break;
+    if (visibleChars(alt[alt.length - 1]) > WIDOW) return alt;
+  }
+  return base;
 }
 
 export function maxLineWidth(lines: string[], measurer: TextMeasurer, font: FontSpec): number {

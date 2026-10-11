@@ -606,8 +606,8 @@ class Router {
       const pos = { x: pt.x + nn.x * offset, y: pt.y + nn.y * offset };
       if (axis === 'x') pos.y += nn.y * (h / 2);
       else pos.x += nn.x * (w / 2);
-      const anchor: EdgeLabelGeom['anchor'] = axis === 'x' ? 'middle' : nn.x > 0 ? 'start' : 'end';
-      return { pos, anchor, lines, box: { x: pos.x - w / 2, y: pos.y - h / 2, width: w, height: h } };
+      // pos は縦横どちらの線でも枠の中心なので、字は常に中央揃えにする（start / end だと幅の半分ずれる）
+      return { pos, anchor: 'middle', lines, box: { x: pos.x - w / 2, y: pos.y - h / 2, width: w, height: h } };
     };
     let label = place(n);
     if (!this.inLane(pt)) {
