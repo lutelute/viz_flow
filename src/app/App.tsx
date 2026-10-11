@@ -60,8 +60,9 @@ interface Carry {
 function carryOf(templateId: string, tl: CompiledTimeline, st: TransportState): Carry {
   const i = stepIndexAt(tl, st.t);
   const s = tl.steps[i];
-  const len = s ? s.t1 - s.t0 : 0;
-  const frac = s && len > 0 ? Math.min(1, Math.max(0, (st.t - s.t0) / len)) : 0;
+  if (!s || st.t < s.t0) return { templateId, mode: st.mode, rate: st.rate, loop: st.loop, stepIndex: -1, frac: 0, t: st.t };
+  const len = s.t1 - s.t0;
+  const frac = len > 0 ? Math.min(1, Math.max(0, (st.t - s.t0) / len)) : 0;
   return { templateId, mode: st.mode, rate: st.rate, loop: st.loop, stepIndex: i, frac, t: st.t };
 }
 
@@ -122,11 +123,14 @@ export function App() {
 
   useLayoutEffect(() => {
     if (!pending) return;
-    if (pending.step != null) transport.seekStep(pending.step - 1);
-    else if (pending.at != null) transport.seek(pending.at);
+    if (pending.step != null) {
+      if (pending.step <= timeline.steps.length) transport.seekStep(pending.step - 1);
+    } else if (pending.at != null) {
+      transport.seek(pending.at);
+    }
     if (pending.static) transport.pause();
     shellStore.set({ pending: null });
-  }, [pending, transport]);
+  }, [pending, transport, timeline]);
 
   useEffect(() => {
     scheduleUrlWrite({ t: templateId, style: styleId, theme, step: state.mode === 'scrub' ? stepIndex + 1 : null, debug });

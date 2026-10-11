@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DiagramEdge, DiagramGroup, DiagramNode, Lane, NodeKind, Payload, PayloadKind, Source, ToneId } from '../../model/diagram';
-import type { EdgeGeom, NodeBox, Pt, Rect, Size } from '../../layout/types';
+import type { EdgeGeom, NodeBox, Pt, Rect, Size, TextMeasurer } from '../../layout/types';
 import type { CompiledStep, NodeState, ParticleFrame, Phase } from '../../timeline/types';
 import type { FontFace, RenderCtx, Skin, SkinTokens } from '../types';
 import { nodeGlyph } from '../icons';
@@ -94,6 +94,24 @@ export const blueprintTokens: SkinTokens = {
   texture: 'graph',
   dark: false,
 };
+
+/**
+ * M PLUS 1 Code は全角 1em、半角 0.5em の厳密な等幅なので、canvas で測らず字種から出す。
+ * Google Fonts の分割読み込みでは最初の描画時に欧文のスライスが未着のことがあり、
+ * measure の値が別のフォントの幅になって箱と文字がずれるため。
+ */
+function monoWidth(text: string, size: number): number {
+  let em = 0;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0;
+    const halfKana = cp >= 0xff61 && cp <= 0xff9f;
+    const wide = (cp >= 0x2e80 && !halfKana) || (cp >= 0x2010 && cp <= 0x205e);
+    em += wide ? 1 : 0.5;
+  }
+  return em * size;
+}
+
+const monoMeasurer: TextMeasurer = { width: (text, _family, size) => monoWidth(text, size) };
 
 function glyphGroup(d: string[], x: number, y: number, size: number, color: string, width: number): ReactNode {
   const k = size / 24;
@@ -201,7 +219,7 @@ function Node(ctx: RenderCtx, node: DiagramNode, box: NodeBox, state: NodeState)
   const code = PART_CODE[node.kind] ?? PART_CODE.generic;
   const codeX = box.x + 7;
   const codeY = box.y + 5;
-  const codeW = ctx.measure.width(code, CODE_FONT.family, CODE_FONT.size, CODE_FONT.weight);
+  const codeW = monoWidth(code, CODE_FONT.size);
 
   const iconSize = t.iconSize;
   const iconColor = muted ? LINE_SOFT : INK;
@@ -294,7 +312,7 @@ function triangle(key: string, at: Pt, angleDeg: number, color: string, size: nu
 function tagOf(ctx: RenderCtx, p: Payload): string | undefined {
   const f = ctx.skin.tokens.font.particle;
   if (p.label) {
-    if (ctx.measure.width(p.label, f.family, f.size, f.weight) <= TAG_MAX_WIDTH) return p.label;
+    if (monoWidth(p.label, f.size) <= TAG_MAX_WIDTH) return p.label;
   } else if (ctx.mode === 'static') {
     return undefined;
   }
@@ -308,7 +326,7 @@ function tagOf(ctx: RenderCtx, p: Payload): string | undefined {
  */
 function callout(ctx: RenderCtx, tag: string, color: string, r: number, heading: number): ReactNode {
   const f = ctx.skin.tokens.font.particle;
-  const w = ctx.measure.width(tag, f.family, f.size, f.weight);
+  const w = monoWidth(tag, f.size);
   const rad = (heading * Math.PI) / 180;
   const rx = -Math.sin(rad);
   const ry = Math.cos(rad);
@@ -372,7 +390,7 @@ function Badge(ctx: RenderCtx, n: number, pos: Pt, phase: Phase, short?: string)
   const ring = phase === 'pending' ? LINE_SOFT : BLUE;
   const num = phase === 'active' ? FACE : phase === 'pending' ? LINE_SOFT : BLUE;
   const f = t.font.edge;
-  const shortW = short ? ctx.measure.width(short, f.family, f.size, f.weight) : 0;
+  const shortW = short ? monoWidth(short, f.size) : 0;
   return (
     <g transform={`translate(${pos.x} ${pos.y})`}>
       <circle r={r} fill={face} stroke={ring} strokeWidth={phase === 'pending' ? 1.2 : 1.5} />
@@ -390,28 +408,7 @@ function Badge(ctx: RenderCtx, n: number, pos: Pt, phase: Phase, short?: string)
 function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active: number): ReactNode {
   const t = ctx.skin.tokens;
   const f = t.font.caption;
-  if (active < 0 || !steps[active]) {
-    const small: FontFace = { ...f, size: 17 };
-    const cols = steps.length > 4 ? 2 : 1;
-    const colW = rect.width / cols;
-    const per = Math.ceil(steps.length / cols);
-    const items: ReactNode[] = [];
-    for (let c = 0; c < cols; c++) {
-      const x = rect.x + c * colW;
-      let y = rect.y;
-      for (const s of steps.slice(c * per, (c + 1) * per)) {
-        const lines = wrapLines(s.caption, colW - 52, ctx.measure, small).slice(0, 2);
-        items.push(
-          <g key={s.index}>
-            {Badge(ctx, s.n, { x: x + 12, y: y + 12 }, 'done')}
-            {Text({ x: x + 32, y, lines, font: small, fill: INK, leading: 1.4 })}
-          </g>,
-        );
-        y += textHeight(lines.length, small, 1.4) + 8;
-      }
-    }
-    return <g>{items}</g>;
-  }
+  if (active < 0 || !steps[active]) return stepList(ctx, rect, steps);
   const st = steps[active];
   const lines = wrapLines(st.caption, rect.width - 44, ctx.measure, f).slice(0, 3);
   return (
@@ -423,6 +420,47 @@ function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active:
   );
 }
 
+/** 番号付きの一覧を 2 段組で。帯の高さに収まるまで文字を 17px から 13px まで段階的に小さくする。 */
+function stepList(ctx: RenderCtx, rect: Rect, steps: CompiledStep[]): ReactNode {
+  const f = ctx.skin.tokens.font.caption;
+  const cols = steps.length > 4 ? 2 : 1;
+  const colW = rect.width / cols;
+  const per = Math.ceil(steps.length / cols);
+  const leading = 1.4;
+  let font: FontFace = { ...f, size: 17 };
+  let gap = 8;
+  let columns: string[][][] = [];
+  for (const size of [17, 15, 14, 13]) {
+    font = { ...f, size };
+    gap = size >= 15 ? 8 : 6;
+    columns = [];
+    let tallest = 0;
+    for (let c = 0; c < cols; c++) {
+      const col = steps.slice(c * per, (c + 1) * per).map((s) => wrapLines(s.caption, colW - 52, ctx.measure, font).slice(0, 2));
+      columns.push(col);
+      const h = col.reduce((acc, lines) => acc + textHeight(lines.length, font, leading), 0) + gap * (col.length - 1);
+      tallest = Math.max(tallest, h);
+    }
+    if (tallest <= rect.height) break;
+  }
+  const items: ReactNode[] = [];
+  columns.forEach((col, c) => {
+    const x = rect.x + c * colW;
+    let y = rect.y;
+    col.forEach((lines, i) => {
+      const s = steps[c * per + i];
+      items.push(
+        <g key={s.index}>
+          {Badge(ctx, s.n, { x: x + 12, y: y + 11 }, 'done')}
+          {Text({ x: x + 32, y, lines, font, fill: INK, leading })}
+        </g>,
+      );
+      y += textHeight(lines.length, font, leading) + gap;
+    });
+  });
+  return <g>{items}</g>;
+}
+
 /** 表題欄。出典と図番を細線の枠に入れ、右下に寄せる。出典が長いときだけ幅いっぱいに広げて 2 行にする。 */
 function Citation(ctx: RenderCtx, rect: Rect, sources: Source[]): ReactNode {
   const t = ctx.skin.tokens;
@@ -431,11 +469,11 @@ function Citation(ctx: RenderCtx, rect: Rect, sources: Source[]): ReactNode {
   const id = ctx.diagramId;
   const cellLabelW = 46;
   const pad = 8;
-  const idW = Math.ceil(ctx.measure.width(id, f.family, f.size, f.weight)) + pad * 2;
+  const idW = Math.ceil(monoWidth(id, f.size)) + pad * 2;
   const text = sources.map(formatSource).join(' ／ ');
   const maxTextW = rect.width - cellLabelW * 2 - idW;
-  const textW = Math.min(maxTextW, Math.ceil(ctx.measure.width(text, f.family, f.size, f.weight)) + pad * 2);
-  const lines = wrapLines(text, textW - pad * 2, ctx.measure, f).slice(0, 2);
+  const textW = Math.min(maxTextW, Math.ceil(monoWidth(text, f.size)) + pad * 2);
+  const lines = wrapLines(text, textW - pad * 2, monoMeasurer, f).slice(0, 2);
   const w = cellLabelW * 2 + textW + idW;
   const x0 = rect.x + rect.width - w;
   const textX = x0 + cellLabelW;

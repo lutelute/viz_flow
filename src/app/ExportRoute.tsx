@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { content, findComposition } from '../content';
-import { diagramsOf } from '../model/diagram';
+import { diagramsOf, type Composition } from '../model/diagram';
 import type { FrameAspect } from '../layout/types';
 import { getSkin, skinList } from '../skins';
+import type { Skin } from '../skins/types';
+import { CompositionView, useCompositionModel, type CompositionModel } from '../render/CompositionView';
 import { DiagramPlayer, usePlayerModel } from '../render/DiagramPlayer';
 
 // ?export=1 用の素の描画。UI を描かず、投稿サイズの SVG を 1 枚だけ置く。
@@ -40,9 +42,8 @@ export function ExportRoute(): ReactNode {
   const skin = getSkin(params.get('style'));
   const size = SIZES[params.get('size') ?? '4x5'] ?? SIZES['4x5'];
   const transparent = params.get('bg') === 'none';
-  const diagram = diagramsOf(composition)[0];
 
-  const model = usePlayerModel(diagram, skin, size.aspect, false);
+  const model = useCompositionModel(composition, skin, false);
   const [painted, setPainted] = useState(false);
 
   const at = params.get('at');
@@ -54,19 +55,19 @@ export function ExportRoute(): ReactNode {
     if (model.fontStatus === 'loading') return;
     const id = requestAnimationFrame(() => requestAnimationFrame(() => setPainted(true)));
     return () => cancelAnimationFrame(id);
-  }, [model.fontStatus, model.layout]);
+  }, [model.fontStatus, model.cells]);
 
   const api = useMemo<VizflowExportApi>(
     () => ({
       isReady: false,
-      duration: model.timeline.duration,
+      duration: model.duration,
       fps: 30,
       width: size.width,
       height: size.height,
-      steps: model.timeline.steps.map((s) => ({ n: s.n, t0: s.t0, t1: s.t1, caption: s.caption })),
+      steps: model.transport.timeline.steps.map((s) => ({ n: s.n, t0: s.t0, t1: s.t1, caption: s.caption })),
       seek: (t: number) => model.transport.seek(t),
     }),
-    [model.timeline, model.transport, size.width, size.height],
+    [model.duration, model.transport, size.width, size.height],
   );
 
   useEffect(() => {
@@ -77,7 +78,27 @@ export function ExportRoute(): ReactNode {
   return (
     <div style={{ width: size.width, height: size.height, overflow: 'hidden', background: transparent ? 'transparent' : skin.tokens.bg }}>
       <style>{`html,body{margin:0;background:${transparent ? 'transparent' : skin.tokens.bg};}`}</style>
-      <DiagramPlayer diagram={diagram} skin={skin} model={model} showCaption width={size.width} height={size.height} />
+      {composition.kind === 'single' ? (
+        <SinglePost composition={composition} skin={skin} model={model} aspect={size.aspect} width={size.width} height={size.height} />
+      ) : (
+        <CompositionView composition={composition} skin={skin} model={model} frame={size.aspect} width={size.width} height={size.height} />
+      )}
     </div>
   );
+}
+
+/** 単体の図は投稿枠（題名・キャプション帯・出典つき）で描く。時計は composition 側の Transport に従う。 */
+function SinglePost({ composition, skin, model, aspect, width, height }: { composition: Composition; skin: Skin; model: CompositionModel; aspect: FrameAspect; width: number; height: number }): ReactNode {
+  const diagram = diagramsOf(composition)[0];
+  const playerModel = usePlayerModel(diagram, skin, aspect, false);
+  useEffect(() => {
+    const follow = () => {
+      const st = model.transport.getState();
+      if (st.mode === 'static') playerModel.transport.pause();
+      else playerModel.transport.seek(st.t);
+    };
+    follow();
+    return model.transport.subscribe(follow);
+  }, [model.transport, playerModel.transport]);
+  return <DiagramPlayer diagram={diagram} skin={skin} model={playerModel} showCaption width={width} height={height} />;
 }

@@ -1,6 +1,6 @@
 /* シェルの配置と部品。色・字・間隔は tokens.css の変数だけを使う。 */
-html,
-body {
+/* 旧版（?legacy=1）と書き出し経路（?export=1）に影響しないよう、.shell の中だけに効かせる */
+body:has(.shell) {
   background: var(--ui-bg);
   color: var(--ui-ink);
 }
@@ -64,14 +64,10 @@ body {
   cursor: default;
 }
 
-.ui-btn--primary {
+.shell .ui-btn--primary {
   background: var(--ui-accent);
   border-color: var(--ui-accent);
   color: var(--ui-on-accent);
-}
-
-.ui-btn--primary:hover {
-  background: var(--ui-accent);
 }
 
 .ui-btn[role="switch"][aria-checked="true"] {
@@ -533,6 +529,19 @@ body {
   color: var(--ui-ink-soft);
 }
 
+.dlg__fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.dlg__fieldset > legend {
+  float: left;
+  padding: 0;
+  color: var(--ui-ink-soft);
+}
+
 .dlg__radios {
   display: flex;
   flex-wrap: wrap;
@@ -546,6 +555,10 @@ body {
   border-radius: var(--ui-radius);
   background: var(--ui-bg);
   width: 100%;
+}
+
+.dlg__actions {
+  margin: 8px 0 0;
 }
 
 .dlg__code {
@@ -593,14 +606,33 @@ body {
 
 /* share */
 .share {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+}
+
+.share__pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  white-space: nowrap;
+}
+
+.share__pop:empty {
+  display: none;
 }
 
 .share__url {
-  width: 220px;
-  max-width: 50vw;
+  width: 280px;
+  max-width: 70vw;
 }
 
 /* drawer */

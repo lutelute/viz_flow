@@ -65,6 +65,7 @@ export function ExportDialog(props: ExportDialogProps) {
       : { loops, quality }),
   };
   const command = exportCommand(req);
+  const stepNumbers = steps.map((s) => s.n).filter((n, i, arr) => arr.indexOf(n) === i);
 
   const run = async () => {
     if (onExport) {
@@ -96,8 +97,8 @@ export function ExportDialog(props: ExportDialogProps) {
         </button>
       </div>
       <div className="dlg__body">
-        <fieldset className="dlg__row" style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend className="dlg__label" style={{ float: 'left' }}>{S.export.format}</legend>
+        <fieldset className="dlg__row dlg__fieldset">
+          <legend>{S.export.format}</legend>
           <div className="dlg__radios">
             <label className="ui-check">
               <input type="radio" name="export-format" checked={format === 'png'} onChange={() => setFormat('png')} />
@@ -135,9 +136,9 @@ export function ExportDialog(props: ExportDialogProps) {
               onChange={(e) => setAtMode(e.target.value === 'now' ? 'now' : Number(e.target.value))}
             >
               <option value="now">{S.export.atNow}</option>
-              {steps.map((s) => (
-                <option key={s.index} value={s.index + 1}>
-                  {S.export.atStep(s.index + 1)}
+              {stepNumbers.map((n) => (
+                <option key={n} value={n}>
+                  {S.export.atStep(n)}
                 </option>
               ))}
             </select>
@@ -184,7 +185,7 @@ export function ExportDialog(props: ExportDialogProps) {
           <div>
             <p className="ui-note">{S.export.commandNote}</p>
             <pre className="dlg__code" aria-label={S.export.command}>{command}</pre>
-            <p className="ui-field" style={{ marginTop: 8 }}>
+            <p className="ui-field dlg__actions">
               <button type="button" className="ui-btn" onClick={copyCommand}>
                 {S.export.copyCommand}
               </button>

@@ -19,12 +19,15 @@ export function ShareButton({ status, url, onCopy }: ShareButtonProps) {
       <button type="button" className="ui-btn" onClick={onCopy}>
         {S.nav.share}
       </button>
-      <span className="ui-status" role="status" aria-live="polite">
-        {status === 'copied' ? S.share.copied : status === 'failed' ? S.share.failed : ''}
+      <span className="share__pop" role="status" aria-live="polite">
+        {status === 'copied' && <span className="ui-status">{S.share.copied}</span>}
+        {status === 'failed' && (
+          <>
+            <span className="ui-status">{S.share.failed}</span>
+            <input ref={input} className="dlg__input share__url" type="text" readOnly value={url} aria-label={S.share.urlLabel} />
+          </>
+        )}
       </span>
-      {status === 'failed' && (
-        <input ref={input} className="dlg__input share__url" type="text" readOnly value={url} aria-label={S.share.urlLabel} />
-      )}
     </span>
   );
 }

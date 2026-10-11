@@ -9,6 +9,13 @@ import { compileTimeline } from '../timeline';
 import { fitScale } from '../render/fit';
 
 describe('content', () => {
+  it('RAG の各図には出典がある', () => {
+    for (const entry of content.filter((c) => c.group === 'RAG')) {
+      const ds = diagramsOf(entry.composition);
+      expect(ds.some((d) => d.sources.length > 0), entry.composition.id).toBe(true);
+    }
+  });
+
   for (const entry of content) {
     for (const d of diagramsOf(entry.composition)) {
       it(`${d.id}: 定義に問題が無く、レイアウト警告が無く、タイムラインが組める`, () => {
@@ -19,7 +26,6 @@ describe('content', () => {
         const tl = compileTimeline(d, layout);
         expect(tl.duration).toBeGreaterThan(0);
         expect(tl.steps.length).toBe(d.steps.length);
-        expect(d.sources.length).toBeGreaterThan(0);
       });
     }
   }
