@@ -26,7 +26,7 @@ export const agenticRag: Diagram = {
   edges: [
     { id: 'e-user-agent', from: 'user', to: 'agent' },
     { id: 'e-agent-memory', from: 'agent', to: 'memory', role: 'ref', arrow: 'both', label: '読み書き' },
-    { id: 'e-agent-mcp', from: 'agent', to: 'mcp', label: '道具を呼ぶ', fromSide: 'left', toSide: 'left' },
+    { id: 'e-agent-mcp', from: 'agent', to: 'mcp', fromSide: 'left', toSide: 'left' },
     { id: 'e-mcp-vec', from: 'mcp', to: 't-vec', role: 'branch', branch: { group: 't', option: 'vec' } },
     { id: 'e-mcp-web', from: 'mcp', to: 't-web', role: 'branch', branch: { group: 't', option: 'web' } },
     { id: 'e-mcp-sql', from: 'mcp', to: 't-sql', role: 'branch', branch: { group: 't', option: 'sql' } },
