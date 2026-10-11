@@ -10,7 +10,7 @@ import { fitScale } from '../render/fit';
 
 describe('content', () => {
   it('RAG の各図には出典がある', () => {
-    for (const entry of content.filter((c) => c.group === 'RAG')) {
+    for (const entry of content.filter((c) => c.group.startsWith('RAG'))) {
       const ds = diagramsOf(entry.composition);
       expect(ds.some((d) => d.sources.length > 0), entry.composition.id).toBe(true);
     }
