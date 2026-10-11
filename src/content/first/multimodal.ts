@@ -10,6 +10,7 @@ export const firstMultimodal: Diagram = {
   id: 'first-multimodal',
   title: 'マルチモーダル RAG',
   subtitle: '画像と文を同じ空間のベクトルにして、まとめて探す',
+  detail: multimodalRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'img', kind: 'image', label: '画像', lane: 'flow', col: 0, row: 0 },

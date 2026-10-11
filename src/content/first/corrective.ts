@@ -10,6 +10,7 @@ export const firstCorrective: Diagram = {
   id: 'first-corrective',
   title: 'CRAG（訂正つき RAG）',
   subtitle: '取り出した文書を採点し、駄目なら Web で探し直す',
+  detail: correctiveRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'user', kind: 'user', label: '質問', lane: 'flow', col: 0, row: 0 },

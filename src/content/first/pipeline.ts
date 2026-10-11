@@ -1,4 +1,5 @@
 import type { Diagram } from '../../model/diagram';
+import { dataPipeline } from '../data/pipeline';
 import { flowLane } from './lane';
 
 // 最初の版の「Data Pipeline」を略図で描き直したもの。部品も並びも元の 6 つのまま、折り返して 2 段にする。
@@ -7,6 +8,7 @@ export const firstPipeline: Diagram = {
   id: 'first-pipeline',
   title: 'データパイプライン',
   subtitle: 'データを集めて整え、学習して、結果を見せる',
+  detail: dataPipeline.id,
   lanes: flowLane,
   nodes: [
     { id: 'source', kind: 'documents', label: 'データ源', sublabel: 'API・CSV・DB', lane: 'flow', col: 0, row: 0 },

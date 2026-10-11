@@ -14,6 +14,8 @@ interface Frac {
 }
 
 const DURATION = 360;
+/** 図の中に押した場所が無いとき（詳しい図へ入るなど）は、図の中ほどから広げる */
+const WHOLE: Frac = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
 const EASE = 'cubic-bezier(.2,.7,.2,1)';
 
 function fracOf(el: Element, frame: Element): Frac | null {
@@ -59,16 +61,14 @@ export function useZoom(frameRef: RefObject<HTMLElement | null>, viewKey: string
 
     if (path.length > before.path.length) {
       // ひらいた: 前の段で押した部品の位置から広げる
-      const start = before.spots.get(path[before.path.length]);
-      if (!start) return;
+      const start = before.spots.get(path[before.path.length]) ?? WHOLE;
       const s = Math.max(0.05, start.w);
       play(frame, `translate(${start.x * W}px, ${start.y * H + (start.h * H - H * s) / 2}px) scale(${s})`, 0.15);
       return;
     }
     if (path.length < before.path.length) {
       // もどった: 今の段でさっきひらいていた部品が画面いっぱいの所から縮める
-      const f = prev.current.spots.get(before.path[path.length]);
-      if (!f) return;
+      const f = prev.current.spots.get(before.path[path.length]) ?? WHOLE;
       const S = Math.min(8, 1 / Math.max(0.05, f.w));
       play(frame, `translate(${-f.x * W * S}px, ${-(f.y + f.h / 2) * H * S + H / 2}px) scale(${S})`, 0.3);
     }

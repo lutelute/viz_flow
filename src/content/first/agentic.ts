@@ -10,6 +10,7 @@ export const firstAgentic: Diagram = {
   id: 'first-agentic',
   title: 'エージェント型 RAG',
   subtitle: '道具を選んで呼び、結果を見て足りなければやり直す',
+  detail: agenticRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'vec', kind: 'vectordb', label: 'ベクトル DB', lane: 'flow', col: 2, row: 0, opens: 'inside-vectordb' },

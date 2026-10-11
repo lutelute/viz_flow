@@ -10,7 +10,32 @@ export interface OpenPanelProps {
 
 /** 図の中の印と同じものを、文字の一覧でも選べるようにする。キーボードと読み上げ向け。 */
 export function OpenPanel({ items, multi, onOpen }: OpenPanelProps) {
-  if (items.length === 0) return null;
+  const detail = items.find((o) => o.detail);
+  const parts = items.filter((o) => !o.detail);
+  return (
+    <>
+      {detail && (
+        <section aria-labelledby="panel-detail">
+          <h2 id="panel-detail">{S.open.detailGo}</h2>
+          <ul className="openlist">
+            <li>
+              <button type="button" className="openlist__btn" onClick={() => onOpen(detail.segment)}>
+                <span className="openlist__mark" aria-hidden="true" />
+                <span className="openlist__name">{detail.target.title}</span>
+                {detail.target.subtitle && <span className="openlist__sub">{detail.target.subtitle}</span>}
+              </button>
+            </li>
+          </ul>
+        </section>
+      )}
+      {parts.length > 0 && (
+        <PartList items={parts} multi={multi} onOpen={onOpen} />
+      )}
+    </>
+  );
+}
+
+function PartList({ items, multi, onOpen }: OpenPanelProps) {
   return (
     <section aria-labelledby="panel-open">
       <h2 id="panel-open">{multi ? S.open.cellsHeading : S.open.partsHeading}</h2>

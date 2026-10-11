@@ -61,10 +61,12 @@ export function Stage(props: StageProps) {
     mainRef.current?.focus({ preventScroll: true });
   }, [viewKey]);
 
+  const parts = openables.filter((o) => !o.detail);
+  const detail = openables.find((o) => o.detail);
   const open: OpenHandlers | undefined =
-    openables.length > 0
+    parts.length > 0
       ? {
-          items: openables.map((o) => ({ id: o.segment, label: o.label })),
+          items: parts.map((o) => ({ id: o.segment, label: o.label })),
           onOpen: (id) => onOpen(id),
         }
       : undefined;
@@ -79,11 +81,11 @@ export function Stage(props: StageProps) {
                 <li key={i} className="crumbs__item">
                   {i < depth ? (
                     <button type="button" className="crumbs__link" onClick={() => onUp(i)}>
-                      {lv.title}
+                      {lv.crumb ?? lv.title}
                     </button>
                   ) : (
                     <span className="crumbs__here" aria-current="page">
-                      {lv.title}
+                      {lv.crumb ?? lv.title}
                     </span>
                   )}
                 </li>
@@ -99,7 +101,13 @@ export function Stage(props: StageProps) {
           {S.stage.postFrame}
         </label>
         <div className="stage__notes">
-          {openables.length > 0 && depth === 0 && <span className="ui-note">{isSingle ? S.open.hintParts : S.open.hintCells}</span>}
+          {parts.length > 0 && depth === 0 && <span className="ui-note">{isSingle ? S.open.hintParts : S.open.hintCells}</span>}
+          {detail && (
+            <button type="button" className="ui-btn ui-btn--open" title={S.open.detailHint} onClick={() => onOpen(detail.segment)}>
+              <span className="openlist__mark" aria-hidden="true" />
+              {S.open.detailGo}
+            </button>
+          )}
           {fontNote && (
             <span className="ui-status" role="status">
               {fontNote}

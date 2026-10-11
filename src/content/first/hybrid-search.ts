@@ -10,6 +10,7 @@ export const firstHybridSearch: Diagram = {
   id: 'first-hybrid-search',
   title: 'ハイブリッド検索',
   subtitle: '意味の近さと語の一致の 2 通りで探し、順位を融合する',
+  detail: hybridSearchRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'vec', kind: 'vectordb', label: 'ベクトル検索', sublabel: '意味が近い', lane: 'flow', col: 1, row: 0, opens: 'inside-vectordb' },

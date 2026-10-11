@@ -1,4 +1,4 @@
-import { diagramsOf, type Composition } from '../model/diagram';
+import { diagramsOf, type Composition, type Diagram } from '../model/diagram';
 import { naiveRag } from './rag/naive';
 import { multimodalRag } from './rag/multimodal';
 import { hydeRag } from './rag/hyde';
@@ -68,6 +68,13 @@ for (const e of content) {
 
 export function hasComposition(id: string | null | undefined): boolean {
   return !!id && (content.some((c) => c.composition.id === id) || inner.has(id));
+}
+
+/** 最初の版の図から入る「詳しい図」。単体の図として登録されているものだけを返す。 */
+export function detailOf(d: Diagram): Diagram | null {
+  if (!d.detail) return null;
+  const c = content.find((x) => x.composition.id === d.detail)?.composition;
+  return c?.kind === 'single' ? c.diagram : null;
 }
 
 export function findComposition(id: string | null | undefined): Composition {

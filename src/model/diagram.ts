@@ -153,6 +153,11 @@ export interface Diagram {
   loops?: Array<{ steps: [number, number]; times: number }>;
   sources: Source[];
   layout?: LayoutHints;
+  /**
+   * 同じ型をくわしく描いた図の id（src/content の単体の図）。
+   * 最初の版の図から「詳しい図」へ、ひらくと同じ道のりで入れる。
+   */
+  detail?: string;
 }
 
 export type Composition =

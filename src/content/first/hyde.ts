@@ -9,6 +9,7 @@ export const firstHyde: Diagram = {
   id: 'first-hyde',
   title: 'HyDE',
   subtitle: '答えらしい仮の文書を書かせ、それに似た本物の文書を探す',
+  detail: hydeRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'user', kind: 'user', label: '質問', lane: 'flow', col: 0, row: 0 },

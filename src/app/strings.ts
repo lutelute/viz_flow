@@ -43,6 +43,8 @@ export const S = {
     hintCells: '1 枚を押すと、その図をひらける',
     partsHeading: 'ひらける部品',
     cellsHeading: 'ひらいて見る',
+    detailGo: '詳しい図へ',
+    detailHint: '同じ型を、部品を増やしてくわしく描いた図に入る',
   },
   export: {
     title: '書き出し',

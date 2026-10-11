@@ -10,6 +10,7 @@ export const firstGraph: Diagram = {
   id: 'first-graph',
   title: 'GraphRAG',
   subtitle: 'グラフのまとまりごとに要約を作っておき、要約から答える',
+  detail: graphRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'docs', kind: 'documents', label: '文書', lane: 'flow', col: 0, row: 0 },

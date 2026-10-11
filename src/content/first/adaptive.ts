@@ -10,6 +10,7 @@ export const firstAdaptive: Diagram = {
   id: 'first-adaptive',
   title: 'Adaptive-RAG',
   subtitle: '質問の難しさを見て、検索の深さを変える',
+  detail: adaptiveRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'a', kind: 'router', label: 'A 検索なし', lane: 'flow', col: 2, row: 0 },

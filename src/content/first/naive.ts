@@ -9,6 +9,7 @@ export const firstNaive: Diagram = {
   id: 'first-naive',
   title: '基本の RAG',
   subtitle: '質問に近い文書を探して、LLM に添えて答えさせる',
+  detail: naiveRag.id,
   lanes: flowLane,
   nodes: [
     { id: 'docs', kind: 'documents', label: '文書', lane: 'flow', col: 0, row: 0 },

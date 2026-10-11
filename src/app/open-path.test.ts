@@ -43,6 +43,31 @@ describe('ひらく: 道のり', () => {
   });
 });
 
+describe('ひらく: 最初の版から詳しい図へ', () => {
+  it('最初の版の図は、部品より先に詳しい図をひらける', () => {
+    const first = findComposition('first-naive');
+    const items = openablesOf(first);
+    expect(items[0]).toMatchObject({ segment: 'naive-rag', detail: true });
+    expect(items.filter((o) => !o.detail).map((o) => o.segment)).toEqual(['embed', 'vecdb', 'llm']);
+  });
+
+  it('詳しい図に入り、そこから部品の中へ進める。パンくずは短い名前', () => {
+    const { levels, path } = resolveOpen(findComposition('first-naive'), ['naive-rag', 'embed']);
+    expect(path).toEqual(['naive-rag', 'embed']);
+    expect(levels.map((l) => l.crumb ?? l.title)).toEqual(['基本の RAG', '詳しい図', '埋め込みモデルの中']);
+    expect(levels[1].composition.id).toBe('naive-rag');
+  });
+
+  it('最初の版の図は、どれも実在する単体の図を詳しい図に持つ', () => {
+    const firsts = content.filter((e) => e.group === '最初の版');
+    expect(firsts.length).toBe(10);
+    for (const e of firsts) {
+      const items = openablesOf(e.composition);
+      expect(items.some((o) => o.detail), e.composition.id).toBe(true);
+    }
+  });
+});
+
 describe('ひらく: 中身の図', () => {
   const layerIds = new Set(layers.map((d) => d.id));
 

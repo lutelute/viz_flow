@@ -1,4 +1,5 @@
 import type { Diagram } from '../../model/diagram';
+import { researchProcess } from '../research/process';
 import { flowLane } from './lane';
 
 // 最初の版の「Research Process」を略図で描き直したもの。部品は元の 6 つのまま。
@@ -8,6 +9,7 @@ export const firstResearch: Diagram = {
   id: 'first-research',
   title: '研究の進め方',
   subtitle: '問いを立てて確かめ、答えが出たら論文にする',
+  detail: researchProcess.id,
   lanes: flowLane,
   nodes: [
     { id: 'question', kind: 'query', label: '問い', lane: 'flow', col: 0, row: 0 },

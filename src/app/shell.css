@@ -506,6 +506,15 @@ body:has(.shell) {
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
+.ui-btn--open {
+  color: var(--ui-accent);
+  font-weight: 700;
+}
+
+.ui-btn--open .openlist__mark {
+  margin-top: 0;
+}
+
 .openlist__name {
   font-weight: 700;
 }
