@@ -3,7 +3,7 @@ import type { DiagramEdge, DiagramGroup, DiagramNode, Lane, NodeKind, PayloadKin
 import type { EdgeGeom, LayoutStyle, NodeBox, Pt, Rect, Size, TextMeasurer } from '../layout/types';
 import type { CompiledStep, FrameState, NodeState, ParticleFrame, Phase } from '../timeline/types';
 
-export type SkinId = 'sketch' | 'blueprint' | 'editorial' | 'neon';
+export type SkinId = 'sketch' | 'blueprint' | 'editorial' | 'neon' | 'plain';
 
 export interface FontSpec {
   family: string;
@@ -49,6 +49,10 @@ export interface SkinTokens {
   track: number;
   texture: 'paper' | 'graph' | 'dots' | 'none';
   dark: boolean;
+  /** false なら補足を描かず、レイアウトも場所を取らない。既定 true */
+  showSublabel?: boolean;
+  /** ノードを丸で描く様式の丸の半径。角に付くバッジの位置を丸に合わせる */
+  disc?: number;
 }
 
 export interface RenderCtx {
@@ -84,6 +88,11 @@ export interface Skin {
   Badge(ctx: RenderCtx, n: number, pos: Pt, phase: Phase, short?: string): ReactNode;
   CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active: number): ReactNode;
   Citation(ctx: RenderCtx, rect: Rect, sources: Source[]): ReactNode;
+  /**
+   * 「ひらく」の印（いつも出す）と、押せることを示す輪（ホバーとフォーカスの時だけ出す）。画面専用。
+   * 省略時は箱の右下を折った三角と、箱を囲む破線の角丸四角になる。丸いノードを描く様式は丸に合わせて上書きする。
+   */
+  OpenMark?(ctx: RenderCtx, box: NodeBox): { mark: ReactNode; ring: ReactNode };
 }
 
 /** LayoutStyle をスキンから組み立てる。 */
@@ -95,6 +104,8 @@ export function layoutStyleOf(skin: Skin, measure: TextMeasurer): LayoutStyle {
     nodeMin: t.nodeMin,
     nodePad: t.nodePad,
     iconSize: t.iconSize,
+    showSublabel: t.showSublabel,
+    disc: t.disc,
     corner: t.radius.corner,
     stub: t.stub,
     track: t.track,

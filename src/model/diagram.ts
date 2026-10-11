@@ -4,7 +4,7 @@
 export type NodeKind =
   | 'user' | 'query' | 'documents' | 'chunker' | 'embedding' | 'vectordb' | 'graphdb'
   | 'retriever' | 'reranker' | 'grader' | 'router' | 'prompt' | 'llm' | 'answer'
-  | 'web' | 'tool' | 'agent' | 'memory' | 'policy' | 'encoder' | 'index' | 'image' | 'generic';
+  | 'web' | 'tool' | 'agent' | 'memory' | 'policy' | 'encoder' | 'index' | 'image' | 'port' | 'generic';
 
 export type PayloadKind =
   | 'text' | 'query' | 'vector' | 'chunks' | 'prompt' | 'answer' | 'image'
@@ -54,6 +54,11 @@ export interface DiagramNode {
   icon?: string;
   /** 例外的な手置き。グリッドより優先 */
   at?: { x: number; y: number };
+  /**
+   * 「ひらく」で入る一段下の図の id（src/content/layers）。
+   * 画面ではこの部品をクリックすると、中の仕組みの図に入れる。
+   */
+  opens?: string;
 }
 
 /** 「MCP サーバー」「メモリ」のような視覚的な束 */

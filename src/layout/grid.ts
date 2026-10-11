@@ -79,7 +79,9 @@ interface FrameSpec {
 }
 
 const FRAME_MARGIN = 40;
-const FREE_TITLE_HEIGHT = 96;
+const FREE_TITLE_HEIGHT = 128;
+const FREE_TITLE_TOP = 28;
+const FREE_INSET = 28;
 const FREE_CITATION_HEIGHT = 56;
 const ICON_LABEL_GAP = 6;
 const SUBLABEL_GAP = 2;
@@ -216,7 +218,7 @@ export function resolveLayout(diagram: Diagram, style: LayoutStyle, frame: Frame
     // 折り返しは最小幅を基準にする。箱を細く保ち、列の間に粒子とバッジの居場所を残すため
     const textMax = Math.min(min.w, Math.max(maxBoxW, min.w)) - style.nodePad * 2;
     const labelLines = wrapJa(n.label, textMax, style.measure, style.font.label);
-    const sublabelLines = n.sublabel ? wrapJa(n.sublabel, textMax, style.measure, style.font.sublabel) : [];
+    const sublabelLines = n.sublabel && style.showSublabel !== false ? wrapJa(n.sublabel, textMax, style.measure, style.font.sublabel) : [];
     const textW = Math.max(
       maxLineWidth(labelLines, style.measure, style.font.label),
       maxLineWidth(sublabelLines, style.measure, style.font.sublabel),
@@ -225,7 +227,7 @@ export function resolveLayout(diagram: Diagram, style: LayoutStyle, frame: Frame
     let textH = labelLines.length * style.font.label.size * LINE_HEIGHT;
     if (sublabelLines.length > 0) textH += SUBLABEL_GAP + sublabelLines.length * style.font.sublabel.size * LINE_HEIGHT;
     const h = Math.max(min.h, style.nodePad * 2 + style.iconSize + ICON_LABEL_GAP + textH);
-    sized.set(n.id, { id: n.id, w, h, labelLines, sublabelLines });
+    sized.set(n.id, style.disc ? { id: n.id, w, h, labelLines, sublabelLines, disc: style.disc } : { id: n.id, w, h, labelLines, sublabelLines });
     maxW = Math.max(maxW, w);
     maxH = Math.max(maxH, h);
   }
@@ -304,10 +306,13 @@ export function resolveLayout(diagram: Diagram, style: LayoutStyle, frame: Frame
   let caption: Rect | undefined;
   let citation: Rect;
   if (frame === 'free') {
-    size = { width: natural.width, height: FREE_TITLE_HEIGHT + natural.height + FREE_CITATION_HEIGHT };
-    title = { x: 0, y: 0, width: natural.width, height: FREE_TITLE_HEIGHT };
-    figure = { x: 0, y: FREE_TITLE_HEIGHT, width: natural.width, height: natural.height };
-    citation = { x: 0, y: FREE_TITLE_HEIGHT + natural.height, width: natural.width, height: FREE_CITATION_HEIGHT };
+    // 図は外周 FREE_INSET の内側に収め、題名と出典は図の左端（FREE_INSET + FIT_PAD）にそろえる。
+    // 外周に枠を描く様式（製図）でも、枠線が題名や図にかからない。
+    const textX = FREE_INSET + 8;
+    size = { width: natural.width, height: FREE_TITLE_HEIGHT + natural.height + FREE_CITATION_HEIGHT + FREE_INSET };
+    title = { x: textX, y: FREE_TITLE_TOP, width: natural.width - textX * 2, height: FREE_TITLE_HEIGHT - FREE_TITLE_TOP };
+    figure = { x: FREE_INSET, y: FREE_TITLE_HEIGHT, width: natural.width - FREE_INSET * 2, height: natural.height };
+    citation = { x: textX, y: FREE_TITLE_HEIGHT + natural.height, width: natural.width - textX * 2, height: FREE_CITATION_HEIGHT };
   } else {
     const spec = FRAMES[frame];
     const x = FRAME_MARGIN;

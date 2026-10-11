@@ -188,6 +188,20 @@ describe('resolveLayout: 2 レーンの RAG', () => {
     expect(layout.nodes.get('prompt')!.labelLines).toEqual(['プロンプト', 'テンプレート']);
   });
 
+  it('showSublabel: false なら補足を折り返さず、箱も補足の分だけ高くならない', () => {
+    const d = sampleRag();
+    const llm = d.nodes.find((n) => n.id === 'llm')!;
+    llm.sublabel = '回答を書く。補足は二行にわたるほど長い';
+    const tall = { ...style, nodeMin: { ...style.nodeMin, md: { w: 120, h: 40 } } };
+    const withSub = resolveLayout(d, tall).nodes.get('llm')!;
+    const without = resolveLayout(d, { ...tall, showSublabel: false }).nodes.get('llm')!;
+    const bare = resolveLayout(sampleRag(), tall).nodes.get('llm')!;
+    expect(withSub.sublabelLines.length).toBeGreaterThan(0);
+    expect(without.sublabelLines).toEqual([]);
+    expect(without.h).toBe(bare.h);
+    expect(without.h).toBeLessThan(withSub.h);
+  });
+
   it('ループは下側の外周チャネルを通る', () => {
     const lane = layout.lanes.get('answer')!;
     const loop = layout.edges.get('loop')!;
@@ -245,7 +259,7 @@ describe('resolveLayout: ファンアウト', () => {
 
   it('警告が無く、free 枠は図の自然寸法になる', () => {
     expect(layout.warnings).toEqual([]);
-    expect(layout.figure.y).toBe(layout.title.height);
+    expect(layout.figure.y).toBe(layout.title.y + layout.title.height);
     expect(layout.citation.y).toBe(layout.figure.y + layout.figure.height);
     expect(layout.caption).toBeUndefined();
   });

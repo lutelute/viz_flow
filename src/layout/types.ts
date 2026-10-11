@@ -36,6 +36,10 @@ export interface LayoutStyle {
   nodePad: number;
   /** アイコンの一辺 */
   iconSize: number;
+  /** false なら補足（sublabel）を折り返さず、その高さも取らない。既定 true */
+  showSublabel?: boolean;
+  /** ノードを丸で描く様式の丸の半径。NodeBox.disc に写す */
+  disc?: number;
   /** 配線の角丸。製図は 0 */
   corner: number;
   /** ポートから最初の折れ点までの突き出し */
@@ -83,6 +87,8 @@ export interface NodeBox {
   ports: Record<Side, Pt>;
   labelLines: string[];
   sublabelLines: string[];
+  /** 様式が箱ではなく丸を描くときの丸の半径（中心は cx, cy）。角に付くバッジを丸に寄せるのに使う */
+  disc?: number;
 }
 
 export interface EdgeLabelGeom {

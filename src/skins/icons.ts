@@ -37,6 +37,8 @@ export const NODE_GLYPHS: Record<NodeKind, string[]> = {
   encoder: ['M4 5h16l-5.5 6.5V18l-5 2.5v-9L4 5Z'],
   index: ['M4 7h16v13H4V7Z', 'M4 11h16', 'M8 7V4h8v3', 'M10 15h4'],
   image: ['M4 5h16v14H4V5Z', 'M4 16l5-5 4 4 3-3 4 4', 'M15.5 9a1 1 0 1 0 0 .01Z'],
+  /** 外の図との境目。括弧の内側へ矢印が入る */
+  port: ['M3 12h11', 'M10.5 8.5 14 12l-3.5 3.5', 'M17 4h4v16h-4'],
   generic: ['M5 5h14v14H5V5Z'],
 };
 

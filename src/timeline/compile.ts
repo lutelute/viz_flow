@@ -87,6 +87,13 @@ function nodeCenter(box: NodeBox): Pt {
 }
 
 function nodeCorner(box: NodeBox, corner: 'ne' | 'nw' | 'se' | 'sw' = 'ne'): Pt {
+  if (box.disc) {
+    // 丸を描く様式では、箱の角ではなく丸の斜め上（下）に置く
+    const d = box.disc + 6;
+    const sx = corner === 'ne' || corner === 'se' ? 1 : -1;
+    const sy = corner === 'se' || corner === 'sw' ? 1 : -1;
+    return { x: box.cx + sx * d, y: box.cy + sy * d };
+  }
   switch (corner) {
     case 'ne': return { x: box.x + box.w, y: box.y };
     case 'nw': return { x: box.x, y: box.y };
