@@ -5,7 +5,7 @@
  * React の仮想 DOM を経由しない高速描画
  */
 import { useEffect, useRef, useMemo } from 'react';
-import type { ParticleGroup, GroupParticleBall, FlowNode, Waypoint } from '../core/types';
+import type { ParticleGroup, FlowNode, Waypoint } from '../core/types';
 import type { Theme } from '../core/themes';
 import { buildSegments, posAt } from '../core/particle-math';
 import type { Route } from '../core/particle-math';
@@ -140,7 +140,7 @@ function renderBall(b: CompiledBall, pos: { x: number; y: number }): string {
   return svg;
 }
 
-export function ParticleEngine({ groups, nodeMap, layerRef, theme, speed, onAllArrived }: Props) {
+export function ParticleEngine({ groups, nodeMap, layerRef, speed, onAllArrived }: Props) {
   const compiledRef = useRef<CompiledGroup[]>([]);
   const arrivedFiredRef = useRef<Set<number>>(new Set());
 
@@ -200,7 +200,7 @@ export function ParticleEngine({ groups, nodeMap, layerRef, theme, speed, onAllA
         }
       }
 
-      layer.innerHTML = html;
+      layer!.innerHTML = html;
       frameId = requestAnimationFrame(render);
     }
 

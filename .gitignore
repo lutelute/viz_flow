@@ -23,6 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 
+# Claude Code
+.claude/
+
 # Reference images
 IMG_*.PNG
 IMG_*.png
+
+# Generated output
+out/
+refs/
+frames/
+shots/current/
+shots/diff/
+test-results/
+*.mp4
+*.mov
+*.webm

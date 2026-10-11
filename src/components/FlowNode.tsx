@@ -1,6 +1,5 @@
 import type { FlowNode, NodeShape } from '../core/types';
 import type { Theme } from '../core/themes';
-import { getIconPath } from '../utils/icons';
 import { AnimatedIcon } from './AnimatedIcon';
 
 interface Props {

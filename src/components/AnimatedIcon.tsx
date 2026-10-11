@@ -59,7 +59,7 @@ interface Props {
   nodeId: string; // ユニークキー用
 }
 
-export function AnimatedIcon({ icon, size, color, muted, nodeId }: Props) {
+export function AnimatedIcon({ icon, size, color, nodeId }: Props) {
   const animType = ANIM_TYPE[icon];
   const pathD = getIconPath(icon);
   const animEnabled = useAnimationEnabled();
@@ -151,7 +151,7 @@ function SparkleIcon({ size, color, pathD, nodeId }: { size: number; color: stri
 }
 
 /** 処理・計算 — リングがパルスする */
-function PulseIcon({ size, color, pathD, nodeId }: { size: number; color: string; pathD: string; nodeId: string }) {
+function PulseIcon({ size, color, pathD }: { size: number; color: string; pathD: string; nodeId: string }) {
   const half = size / 2;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
@@ -175,7 +175,7 @@ function PulseIcon({ size, color, pathD, nodeId }: { size: number; color: string
 }
 
 /** フロー制御 — ゆっくり回転 */
-function SpinIcon({ size, color, pathD, nodeId }: { size: number; color: string; pathD: string; nodeId: string }) {
+function SpinIcon({ size, color, pathD }: { size: number; color: string; pathD: string; nodeId: string }) {
   const half = size / 2;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -204,7 +204,7 @@ function SpinIcon({ size, color, pathD, nodeId }: { size: number; color: string;
 }
 
 /** 人間動作 — 軽い上下バウンス */
-function BounceIcon({ size, color, pathD, nodeId }: { size: number; color: string; pathD: string; nodeId: string }) {
+function BounceIcon({ size, color, pathD }: { size: number; color: string; pathD: string; nodeId: string }) {
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
       <g>
@@ -229,7 +229,7 @@ function BounceIcon({ size, color, pathD, nodeId }: { size: number; color: strin
 }
 
 /** ひらめき / 点滅 — opacity が変化 */
-function BlinkIcon({ size, color, pathD, nodeId }: { size: number; color: string; pathD: string; nodeId: string }) {
+function BlinkIcon({ size, color, pathD }: { size: number; color: string; pathD: string; nodeId: string }) {
   const half = size / 2;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
