@@ -19,7 +19,8 @@ export const S = {
   panel: {
     title: 'ステップと説明',
     steps: 'ステップ',
-    caption: '説明',
+    caption: '補足',
+    sourceNote: '図との対応',
     source: '出典',
     static: 'いまは全ステップを静止表示している',
     stepNumber: (n: number, repeat?: number) => (repeat ? `${n}（${repeat} 回目）` : `${n}`),

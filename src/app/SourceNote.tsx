@@ -27,7 +27,12 @@ export function SourceNote({ sources }: SourceNoteProps) {
                 {s.authors}（{s.year}）{href ? <a href={href} target="_blank" rel="noreferrer">{s.title}</a> : s.title}
               </p>
               {meta && <p className="sources__meta">{meta}</p>}
-              {s.note && <p className="sources__note">{s.note}</p>}
+              {s.note && (
+                <details className="sources__more">
+                  <summary>{S.panel.sourceNote}</summary>
+                  <p className="sources__note">{s.note}</p>
+                </details>
+              )}
             </li>
           );
         })}

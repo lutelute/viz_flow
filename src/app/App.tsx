@@ -219,7 +219,7 @@ export function App() {
       <header className="top">
         <h1 className="top__title">{S.appTitle}</h1>
         {narrow && (
-          <button type="button" className="ui-btn" onClick={() => setDialog('gallery')}>
+          <button type="button" className="ui-btn top__gallery" onClick={() => setDialog('gallery')}>
             {S.gallery.open}
           </button>
         )}
@@ -230,7 +230,7 @@ export function App() {
           <button type="button" className="ui-btn" onClick={() => setDialog('export')}>
             {S.nav.export}
           </button>
-          <button type="button" className="ui-btn" onClick={() => setDialog('help')}>
+          <button type="button" className="ui-btn top__help" onClick={() => setDialog('help')}>
             {S.nav.help}
           </button>
         </div>

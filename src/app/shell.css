@@ -138,12 +138,29 @@ body:has(.shell) {
   flex-wrap: wrap;
   gap: var(--ui-gap) 16px;
   padding: 8px 16px;
+  background: var(--ui-bg);
+  border-bottom: 1px solid var(--ui-line-soft);
+}
+
+.top .ui-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-ink-soft);
+}
+
+/* 狭い画面で図を選ぶ唯一の入口なので、これだけは押せる形に見せる */
+.top .top__gallery {
+  border-color: var(--ui-line);
+  color: var(--ui-ink);
+}
+
+.top .ui-btn:hover {
   background: var(--ui-surface);
-  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-ink);
 }
 
 .top__title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   margin: 0 8px 0 0;
   letter-spacing: 0;
@@ -163,28 +180,27 @@ body:has(.shell) {
 /* 様式切替 */
 .style-switch {
   display: inline-flex;
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-surface);
-  overflow: hidden;
+  gap: 2px;
 }
 
 .style-switch__tab {
   min-height: 32px;
   padding: 4px 12px;
   border: 0;
-  border-right: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
   background: transparent;
   color: var(--ui-ink-soft);
   white-space: nowrap;
+  transition: background var(--ui-transition), color var(--ui-transition);
 }
 
-.style-switch__tab:last-child {
-  border-right: 0;
+.style-switch__tab:hover {
+  color: var(--ui-ink);
 }
 
 .style-switch__tab[aria-selected="true"] {
-  background: var(--ui-accent-soft);
+  background: var(--ui-surface);
+  box-shadow: 0 0 0 1px var(--ui-line-soft);
   color: var(--ui-ink);
   font-weight: 700;
 }
@@ -199,7 +215,7 @@ body:has(.shell) {
   min-height: 0;
   overflow-y: auto;
   padding: var(--ui-pad);
-  border-right: 1px solid var(--ui-line);
+  border-right: 1px solid var(--ui-line-soft);
   background: var(--ui-bg);
 }
 
@@ -217,7 +233,7 @@ body:has(.shell) {
 .gallery__list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
 }
 
 .gallery__tab {
@@ -226,8 +242,8 @@ body:has(.shell) {
   gap: 8px;
   width: 100%;
   text-align: left;
-  min-height: 40px;
-  padding: 6px 10px;
+  min-height: 34px;
+  padding: 4px 10px;
   border: 1px solid transparent;
   border-radius: var(--ui-radius);
   background: transparent;
@@ -240,7 +256,6 @@ body:has(.shell) {
 
 .gallery__tab[aria-selected="true"] {
   background: var(--ui-surface);
-  border-color: var(--ui-line);
   font-weight: 700;
 }
 
@@ -253,11 +268,7 @@ body:has(.shell) {
   flex: none;
   font-size: var(--ui-size-sm);
   font-weight: 400;
-  color: var(--ui-ink-soft);
-  border: 1px solid var(--ui-line);
-  border-radius: 999px;
-  padding: 0 8px;
-  line-height: 20px;
+  color: var(--ui-ink-faint);
 }
 
 .gallery__mark {
@@ -385,8 +396,21 @@ body:has(.shell) {
   flex-wrap: wrap;
   gap: 6px 12px;
   padding: 8px 16px;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.transport .ui-btn:not(.ui-btn--primary) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.transport .ui-btn:not(.ui-btn--primary):hover {
   background: var(--ui-surface);
-  border-top: 1px solid var(--ui-line);
+}
+
+.transport .ui-select {
+  border-color: var(--ui-line-soft);
 }
 
 .transport__buttons {
@@ -424,7 +448,7 @@ body:has(.shell) {
   min-height: 0;
   overflow-y: auto;
   padding: var(--ui-pad) 16px;
-  border-left: 1px solid var(--ui-line);
+  border-left: 1px solid var(--ui-line-soft);
   background: var(--ui-bg);
   display: flex;
   flex-direction: column;
@@ -538,22 +562,18 @@ body:has(.shell) {
   color: var(--ui-ink);
 }
 
-.caption {
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-surface);
-  padding: 10px 12px;
-  min-height: 3.2em;
-}
-
-.caption__text {
-  margin: 0;
-  font-size: var(--ui-size-lg);
-}
-
 .caption__detail {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--ui-ink-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .sources {
@@ -575,11 +595,15 @@ body:has(.shell) {
   color: var(--ui-ink-soft);
 }
 
+.sources__more > summary {
+  width: fit-content;
+  color: var(--ui-ink-faint);
+  cursor: pointer;
+}
+
 .sources__note {
   margin: 2px 0 0;
   color: var(--ui-ink-soft);
-  border-left: 2px solid var(--ui-line);
-  padding-left: 8px;
 }
 
 /* dialog */
@@ -810,6 +834,16 @@ body:has(.shell) {
 
   .transport__time {
     min-width: 0;
+  }
+
+  .panel {
+    border-top-color: var(--ui-line-soft);
+  }
+}
+
+@media (max-width: 600px) {
+  .top__help {
+    display: none;
   }
 }
 

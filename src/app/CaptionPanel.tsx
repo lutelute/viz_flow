@@ -7,23 +7,24 @@ export interface CaptionPanelProps {
   isStatic: boolean;
 }
 
-/** 現在のキャプション。文はステップが変わるときだけ変わるので、aria-live はその回数だけ読む。 */
+/**
+ * 現在のステップの知らせ。文はステップ一覧に出ているので、画面には補足（detail）だけを出す。
+ * 読み上げには、ステップが変わるときだけ番号と文を 1 回知らせる。
+ */
 export function CaptionPanel({ step, isStatic }: CaptionPanelProps) {
+  const said = isStatic || !step ? S.panel.static : `${S.panel.stepNumber(step.n, step.repeat)}. ${step.caption}`;
+  const detail = !isStatic && step?.detail;
   return (
-    <section aria-labelledby="panel-caption">
-      <h2 id="panel-caption">{S.panel.caption}</h2>
-      <div className="caption" aria-live="polite" aria-atomic="true">
-        {isStatic || !step ? (
-          <p className="caption__text">{S.panel.static}</p>
-        ) : (
-          <>
-            <p className="caption__text">
-              {S.panel.stepNumber(step.n, step.repeat)}. {step.caption}
-            </p>
-            {step.detail && <p className="caption__detail">{step.detail}</p>}
-          </>
-        )}
-      </div>
-    </section>
+    <>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {said}
+      </p>
+      {detail && (
+        <section aria-labelledby="panel-caption">
+          <h2 id="panel-caption">{S.panel.caption}</h2>
+          <p className="caption__detail">{detail}</p>
+        </section>
+      )}
+    </>
   );
 }

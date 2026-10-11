@@ -4,10 +4,15 @@ import { getSkin } from '../skins';
 import type { FrameAspect } from '../layout/types';
 import { canvasMeasurer } from '../layout';
 import { buildFrameModel, frameInfo } from '../render/renderFrame';
-import { BITRATE_HIGH, BITRATE_NORMAL, downloadBlob, isExportError, runExport, shareBlob, type ExportErrorCode, type ExportOptions, type ExportProgress, type ExportResult } from '../export';
+import type { ExportErrorCode, ExportOptions, ExportProgress, ExportResult } from '../export';
+import { BITRATE_HIGH, BITRATE_NORMAL } from '../export/bitrate';
+import { isExportError } from '../export/errors';
 import type { ExportRequest, ExportSize } from './export-command';
 
 // ダイアログの要求を src/export の runExport に渡し、進捗・結果・失敗を 1 か所で持つ。
+// 書き出しの本体（mediabunny を含む）は重いので、初めて書き出すときに読み込む。
+
+const loadRun = () => import('../export/run');
 
 export type ExportJobPhase = 'idle' | 'running' | 'done' | 'error';
 
@@ -64,6 +69,7 @@ export function useBrowserExport() {
     abort.current = ctl;
     setJob({ phase: 'running', request: req, progress: { done: 0, total: 1, phase: 'fonts' } });
     try {
+      const { runExport } = await loadRun();
       const result = await runExport(toExportOptions(req, embedFonts), (p) => setJob((j) => (j.phase === 'running' ? { ...j, progress: p } : j)), ctl.signal);
       if (ctl.signal.aborted) return;
       url.current = URL.createObjectURL(result.blob);
@@ -89,11 +95,17 @@ export function useBrowserExport() {
   }, []);
 
   const download = useCallback(() => {
-    if (job.phase === 'done' && job.result) downloadBlob(job.result.blob, job.result.filename);
+    if (job.phase === 'done' && job.result) {
+      const { blob, filename } = job.result;
+      void loadRun().then(({ downloadBlob }) => downloadBlob(blob, filename));
+    }
   }, [job]);
 
   const share = useCallback(async () => {
-    if (job.phase === 'done' && job.result) return shareBlob(job.result.blob, job.result.filename);
+    if (job.phase === 'done' && job.result) {
+      const { shareBlob } = await loadRun();
+      return shareBlob(job.result.blob, job.result.filename);
+    }
     return false;
   }, [job]);
 

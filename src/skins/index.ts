@@ -13,10 +13,11 @@ export const skins: Record<SkinId, Skin> = {
   plain: plainSkin,
 };
 
-export const skinList: Skin[] = [sketchSkin, blueprintSkin, editorialSkin, neonSkin, plainSkin];
+// 並びの先頭が既定。いちばん軽い略図から見せる
+export const skinList: Skin[] = [plainSkin, sketchSkin, blueprintSkin, editorialSkin, neonSkin];
 
 export function getSkin(id: string | null | undefined): Skin {
-  return (id && skins[id as SkinId]) || sketchSkin;
+  return (id && skins[id as SkinId]) || skinList[0];
 }
 
 export type { Skin, SkinId } from './types';

@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { content, type ContentEntry } from '../content';
 import { S } from './strings';
 import { rovingTarget } from './roving';
@@ -31,6 +31,10 @@ const FLAT = content.map((e) => e.composition.id);
 export function Gallery({ value, onChange }: GalleryProps) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const index = Math.max(0, FLAT.indexOf(value));
+
+  useEffect(() => {
+    refs.current.get(value)?.scrollIntoView({ block: 'nearest' });
+  }, [value]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const to = rovingTarget(e, index, FLAT.length, 'vertical');
@@ -74,7 +78,7 @@ export function Gallery({ value, onChange }: GalleryProps) {
                       {selected ? '▶' : ''}
                     </span>
                     <span className="gallery__title">{titleOf(e)}</span>
-                    <span className="gallery__kind">{e.layer ? S.kinds.layer : S.kinds[e.composition.kind]}</span>
+                    {e.composition.kind !== 'single' && <span className="gallery__kind">{S.kinds[e.composition.kind]}</span>}
                   </button>
                 );
               })}
