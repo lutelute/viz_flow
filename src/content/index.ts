@@ -10,6 +10,9 @@ import { agenticRag } from './rag/agentic';
 import { ragVsRefrag } from './rag/refrag';
 import { hybridSearchRag } from './rag/hybrid-search';
 import { selfRag } from './rag/self-rag';
+import { ircot } from './rag/ircot';
+import { ragFusion } from './rag/rag-fusion';
+import { speculativeRag } from './rag/speculative';
 import { network } from './infra/network';
 import { dataPipeline } from './data/pipeline';
 import { researchProcess } from './research/process';
@@ -38,6 +41,9 @@ export const content: ContentEntry[] = [
   { group: 'RAG', composition: ragVsRefrag },
   { group: 'RAG の周辺', composition: { kind: 'single', id: hybridSearchRag.id, diagram: hybridSearchRag } },
   { group: 'RAG の周辺', composition: { kind: 'single', id: selfRag.id, diagram: selfRag } },
+  { group: 'RAG の周辺', composition: { kind: 'single', id: ircot.id, diagram: ircot } },
+  { group: 'RAG の周辺', composition: { kind: 'single', id: ragFusion.id, diagram: ragFusion } },
+  { group: 'RAG の周辺', composition: { kind: 'single', id: speculativeRag.id, diagram: speculativeRag } },
   { group: '仕組み', composition: { kind: 'single', id: network.id, diagram: network } },
   { group: '仕組み', composition: { kind: 'single', id: dataPipeline.id, diagram: dataPipeline } },
   { group: '仕組み', composition: { kind: 'single', id: researchProcess.id, diagram: researchProcess } },
