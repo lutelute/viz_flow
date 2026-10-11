@@ -125,10 +125,11 @@ function paths(infos: ReturnType<typeof roughShape>, key: string, extra?: { dash
 function marker(ctx: RenderCtx, key: string, x: number, y: number, w: number, h: number, color: string): ReactNode {
   const s = ctx.seed(key);
   const tilt = ((s % 7) - 3) * 0.25;
-  const infos = roughShape(`marker:${key}:${Math.round(w)}x${Math.round(h)}`, s, (g, o) =>
-    g.rectangle(x, y, w, h, { ...o, fill: color, stroke: 'none', roughness: 1.2, fillStyle: 'solid' }),
+  // 位置を含めず原点で生成し、translate で置く（キャッシュが配置に依存しないように）
+  const infos = roughShape(`marker:${key}:${Math.round(w)}x${Math.round(h)}:${color}`, s, (g, o) =>
+    g.rectangle(0, 0, w, h, { ...o, fill: color, stroke: 'none', roughness: 1.2, fillStyle: 'solid' }),
   );
-  return <g transform={`rotate(${tilt} ${x + w / 2} ${y + h / 2})`}>{paths(infos, `mk-${key}`)}</g>;
+  return <g transform={`translate(${x} ${y}) rotate(${tilt} ${w / 2} ${h / 2})`}>{paths(infos, `mk-${key}`)}</g>;
 }
 
 function glyphGroup(d: string[], x: number, y: number, size: number, color: string, width: number, key: string, dash?: string): ReactNode {
@@ -197,8 +198,8 @@ function LaneBand(ctx: RenderCtx, lane: Lane, rect: Rect): ReactNode {
   const frame = lane.frame ?? 'band';
   const parts: ReactNode[] = [];
   if (frame !== 'none') {
-    const infos = roughShape(`lane:${lane.id}:${Math.round(rect.width)}x${Math.round(rect.height)}`, s, (g, o) =>
-      g.path(roundedRectPath(rect.x, rect.y, rect.width, rect.height, t.radius.lane), {
+    const infos = roughShape(`lane:${lane.id}:${Math.round(rect.width)}x${Math.round(rect.height)}:${frame}`, s, (g, o) =>
+      g.path(roundedRectPath(0, 0, rect.width, rect.height, t.radius.lane), {
         ...o,
         fill: frame === 'band' ? PAPER2 : 'none',
         stroke: LINE_SOFT,
@@ -206,7 +207,7 @@ function LaneBand(ctx: RenderCtx, lane: Lane, rect: Rect): ReactNode {
         roughness: 0.9,
       }),
     );
-    parts.push(<g key="band">{paths(infos, `lane-${lane.id}`)}</g>);
+    parts.push(<g key="band" transform={`translate(${rect.x} ${rect.y})`}>{paths(infos, `lane-${lane.id}`)}</g>);
   }
   if (lane.label) {
     const color = lane.tone ? t.tone[lane.tone] : INK;
@@ -236,12 +237,12 @@ function Group(ctx: RenderCtx, group: DiagramGroup, rect: Rect): ReactNode {
   const t = ctx.skin.tokens;
   const s = ctx.seed(`group:${group.id}`);
   const color = group.tone ? t.tone[group.tone] : LINE;
-  const infos = roughShape(`group:${group.id}:${Math.round(rect.width)}x${Math.round(rect.height)}`, s, (g, o) =>
-    g.path(roundedRectPath(rect.x, rect.y, rect.width, rect.height, 12), { ...o, fill: 'none', stroke: color, strokeWidth: t.stroke.group, roughness: 0.8 }),
+  const infos = roughShape(`group:${group.id}:${Math.round(rect.width)}x${Math.round(rect.height)}:${color}`, s, (g, o) =>
+    g.path(roundedRectPath(0, 0, rect.width, rect.height, 12), { ...o, fill: 'none', stroke: color, strokeWidth: t.stroke.group, roughness: 0.8 }),
   );
   return (
     <g>
-      {paths(infos, `grp-${group.id}`, { dash: '9 7' })}
+      <g transform={`translate(${rect.x} ${rect.y})`}>{paths(infos, `grp-${group.id}`, { dash: '9 7' })}</g>
       {group.label && Text({ x: rect.x + 12, y: rect.y - t.font.sublabel.size * 1.3, lines: [group.label], font: { ...t.font.sublabel, weight: 400 }, fill: color })}
     </g>
   );
@@ -259,11 +260,11 @@ function Node(ctx: RenderCtx, node: DiagramNode, box: NodeBox, state: NodeState)
   const pulse = state.pulse ?? 0;
   const scale = 1 + pulse * 0.04;
 
-  const body = roughShape(`node:${node.id}:${Math.round(box.w)}x${Math.round(box.h)}`, s, (g, o) =>
-    g.path(roundedRectPath(box.x, box.y, box.w, box.h, t.radius.node), { ...o, fill: face, stroke: strokeColor, strokeWidth: strokeW }),
+  const body = roughShape(`node:${node.id}:${Math.round(box.w)}x${Math.round(box.h)}:${face}:${strokeColor}:${strokeW}`, s, (g, o) =>
+    g.path(roundedRectPath(0, 0, box.w, box.h, t.radius.node), { ...o, fill: face, stroke: strokeColor, strokeWidth: strokeW }),
   );
   const ghostLine = roughShape(`node2:${node.id}:${Math.round(box.w)}x${Math.round(box.h)}`, s + 11, (g, o) =>
-    g.path(roundedRectPath(box.x + 2, box.y + 2.5, box.w, box.h, t.radius.node), { ...o, fill: 'none', stroke: LINE_SOFT, strokeWidth: 1.1, roughness: 0.9 }),
+    g.path(roundedRectPath(2, 2.5, box.w, box.h, t.radius.node), { ...o, fill: 'none', stroke: LINE_SOFT, strokeWidth: 1.1, roughness: 0.9 }),
   );
 
   const iconSize = t.iconSize;
@@ -280,8 +281,10 @@ function Node(ctx: RenderCtx, node: DiagramNode, box: NodeBox, state: NodeState)
 
   return (
     <g transform={`rotate(${tilt} ${box.cx} ${box.cy}) translate(${box.cx} ${box.cy}) scale(${scale}) translate(${-box.cx} ${-box.cy})`}>
-      {paths(ghostLine, `n2-${node.id}`)}
-      {paths(body, `n-${node.id}`)}
+      <g transform={`translate(${box.x} ${box.y})`}>
+        {paths(ghostLine, `n2-${node.id}`)}
+        {paths(body, `n-${node.id}`)}
+      </g>
       {newMark}
       {glyphGroup(nodeGlyph(node.kind, node.icon), box.cx - iconSize / 2, top, iconSize, iconColor, t.stroke.icon, `icon-${node.id}`)}
       {Text({ x: box.cx, y: top + iconSize + 8, lines: box.labelLines, font: labelFont, fill: muted ? INK_SOFT : INK, anchor: 'middle', leading: 1.2 })}
@@ -449,7 +452,9 @@ function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active:
     }
     return (
       <g>
-        {best.columns.map((col, c) => Text({ x: rect.x + c * best.colW, y: rect.y, lines: col, font: best.small, fill: INK, leading: 1.45 }))}
+        {best.columns.map((col, c) => (
+          <g key={c}>{Text({ x: rect.x + c * best.colW, y: rect.y, lines: col, font: best.small, fill: INK, leading: 1.45 })}</g>
+        ))}
       </g>
     );
   }
