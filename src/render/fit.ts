@@ -38,11 +38,12 @@ export function fitTransform(layout: ResolvedLayout): string | undefined {
   const b = figureBounds(layout);
   if (!b) return undefined;
   const s = fitScale(layout);
-  if (Math.abs(s - 1) < 0.01) return undefined;
   const f = layout.figure;
   const cx = f.x + f.width / 2;
-  const cy = f.y + f.height / 2;
   const tx = Math.round(cx - (b.x + b.width / 2) * s);
-  const ty = Math.round(cy - (b.y + b.height / 2) * s);
+  // 縦に余るときは題名の近くに寄せる（中央だと副題と図の間が空きすぎる）
+  const slack = f.height - b.height * s;
+  const top = f.y + Math.min(slack / 2, Math.max(24, slack * 0.25));
+  const ty = Math.round(top - b.y * s);
   return `translate(${tx} ${ty}) scale(${s.toFixed(4)})`;
 }

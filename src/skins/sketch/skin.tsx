@@ -429,16 +429,27 @@ function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active:
   const t = ctx.skin.tokens;
   const f = t.font.caption;
   if (active < 0 || !steps[active]) {
-    const small = { ...f, size: Math.round(f.size * 0.72) };
+    // 帯に収まるまで字を小さくし、段を増やす
     const lines = steps.map((s) => `${circled(s.n)} ${s.caption}`);
-    const cols = lines.length > 4 ? 2 : 1;
-    const colW = rect.width / cols;
-    const per = Math.ceil(lines.length / cols);
+    const tryFit = (size: number, cols: number) => {
+      const small = { ...f, size };
+      const colW = rect.width / cols;
+      const per = Math.ceil(lines.length / cols);
+      const columns = Array.from({ length: cols }, (_, c) =>
+        lines.slice(c * per, (c + 1) * per).flatMap((l) => wrapLines(l, colW - 16, ctx.measure, small)),
+      );
+      const h = Math.max(...columns.map((c) => textHeight(c.length, small, 1.45)));
+      return { small, colW, columns, h };
+    };
+    let best = tryFit(Math.round(f.size * 0.72), lines.length > 4 ? 2 : 1);
+    for (const size of [19, 17, 16, 15, 14, 13]) {
+      if (best.h <= rect.height) break;
+      best = tryFit(size, 2);
+      if (best.h > rect.height) best = tryFit(size, 3);
+    }
     return (
       <g>
-        {Array.from({ length: cols }, (_, c) =>
-          Text({ x: rect.x + c * colW, y: rect.y, lines: lines.slice(c * per, (c + 1) * per).flatMap((l) => wrapLines(l, colW - 16, ctx.measure, small).slice(0, 2)), font: small, fill: INK, leading: 1.45 }),
-        )}
+        {best.columns.map((col, c) => Text({ x: rect.x + c * best.colW, y: rect.y, lines: col, font: best.small, fill: INK, leading: 1.45 }))}
       </g>
     );
   }

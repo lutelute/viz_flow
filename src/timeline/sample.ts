@@ -5,6 +5,8 @@ import type { CompiledStep, CompiledTimeline, FrameState, NodeState, ParticleFra
 
 /** 到着の印が消えるまでの秒数 */
 const PULSE_SEC = 0.5;
+/** 静止表示で粒子どうしに空ける最小距離 */
+const STATIC_MIN_GAP = 44;
 
 /** 静止画で同じエッジに複数の粒子を載せるときの位置 */
 export function stepIndexAt(tl: CompiledTimeline, t: number): number {
@@ -210,13 +212,24 @@ export function sampleStatic(tl: CompiledTimeline, opt: StaticOptions = {}): Fra
   }
 
   const particles: ParticleFrame[] = [];
+  const place = (edge: string, item: { id: string; route: Route; payload: Payload }, u: number): ParticleFrame => {
+    const pos = posAt(item.route, u);
+    return { id: item.id, x: pos.x, y: pos.y, heading: headingAt(item.route, u), payload: item.payload, phase: 'travel', phaseT: u, edge };
+  };
   for (const [edge, items] of byEdge) {
     const item = items[0];
-    const u = opt.labeledEdges?.has(edge) ? 0.72 : 0.5;
-    const pos = posAt(item.route, u);
-    particles.push({
-      id: item.id, x: pos.x, y: pos.y, heading: headingAt(item.route, u), payload: item.payload, phase: 'travel', phaseT: u, edge,
-    });
+    const labeled = opt.labeledEdges?.has(edge) ?? false;
+    // 既定は辺の 50%、ラベルのある辺は 72%。先に置いた粒子と重なるときは反対側の候補に逃がす
+    const candidates = labeled ? [0.72, 0.28, 0.85] : [0.5, 0.3, 0.7];
+    let chosen = place(edge, item, candidates[0]);
+    for (const u of candidates) {
+      const pf = place(edge, item, u);
+      if (!particles.some((q) => Math.hypot(q.x - pf.x, q.y - pf.y) < STATIC_MIN_GAP)) {
+        chosen = pf;
+        break;
+      }
+    }
+    particles.push(chosen);
   }
 
   const nodes: Record<string, NodeState> = {};
