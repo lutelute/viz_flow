@@ -42,6 +42,7 @@ export function ExportRoute(): ReactNode {
   const skin = getSkin(params.get('style'));
   const size = SIZES[params.get('size') ?? '4x5'] ?? SIZES['4x5'];
   const transparent = params.get('bg') === 'none';
+  if (params.get('harness') === '1') void import('../export/devHarness').then((m) => m.installExportHarness());
 
   const model = useCompositionModel(composition, skin, false);
   const [painted, setPainted] = useState(false);
