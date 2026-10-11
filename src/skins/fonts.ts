@@ -22,8 +22,11 @@ function ensureLink(id: string, href: string) {
 
 async function waitFonts(fonts: FontSpec[]): Promise<void> {
   if (typeof document === 'undefined' || !('fonts' in document)) return;
-  const loads = fonts.flatMap((f) => f.weights.map((w) => document.fonts.load(`${w} 16px "${f.family}"`, 'あ漢字A1')));
+  // 欧文・数字・全角括弧のスライスも揃うまで待つ（分割配信のため、ひらがなだけでは足りない）
+  const sample = 'あ漢字カナ Lewis 0123（）、。';
+  const loads = fonts.flatMap((f) => f.weights.map((w) => document.fonts.load(`${w} 16px "${f.family}"`, sample)));
   await Promise.all(loads);
+  await document.fonts.ready;
 }
 
 const status = new Map<string, FontStatus>();

@@ -95,17 +95,20 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
     return b ?? { x: 0, y: 0, width: cell.layout.size.width, height: cell.layout.size.height };
   };
   if (composition.kind === 'grid') {
-    const cols = composition.columns;
+    // 縦長の投稿枠では 2 列にする。倍率は全セルで揃え、上端を揃えて並べる
+    const cols = size.height > size.width ? Math.min(2, composition.columns) : composition.columns;
     const rows = Math.ceil(model.cells.length / cols);
     const gap = 24;
     const cw = (body.width - gap * (cols - 1)) / cols;
     const ch = (body.height - gap * (rows - 1)) / rows;
-    model.cells.forEach((cell, i) => {
+    const boxes = model.cells.map((cell) => ({ x: 0, y: 0, width: cell.layout.size.width, height: cell.layout.size.height }));
+    const scale = Math.min(...boxes.map((b) => Math.min(cw / b.width, ch / b.height)));
+    model.cells.forEach((_, i) => {
       const c = i % cols;
       const r = Math.floor(i / cols);
-      const box = { x: 0, y: 0, width: cell.layout.size.width, height: cell.layout.size.height };
-      const rect = { x: body.x + c * (cw + gap), y: body.y + r * (ch + gap), width: cw, height: ch };
-      slots.push({ rect, box, scale: Math.min(rect.width / box.width, rect.height / box.height) });
+      const box = boxes[i];
+      const rect = { x: body.x + c * (cw + gap), y: body.y + r * (ch + gap), width: cw, height: box.height * scale };
+      slots.push({ rect, box, scale });
     });
   } else {
     // 見出しと図を詰めて積み、全体を枠の中央に置く
@@ -163,6 +166,7 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
                 skin={skin}
                 measure={model.measure}
                 showTitle={composition.kind === 'grid'}
+                showBackground={false}
                 showCitation={false}
                 debug={debug}
                 width={cell.layout.size.width}

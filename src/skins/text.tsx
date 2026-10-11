@@ -1,24 +1,11 @@
 import type { ReactNode } from 'react';
 import type { TextMeasurer } from '../layout/types';
 import type { FontFace } from './types';
+import { wrapJa } from '../layout/measure';
 
-/** 手動 '\n' を尊重しつつ、幅に収まるように文字単位で折り返す。禁則は layout/measure の wrapJa に任せ、ここは簡易版。 */
+/** 幅に収まるように折り返す。禁則は layout/measure の wrapJa に従う。 */
 export function wrapLines(text: string, maxWidth: number, measure: TextMeasurer, font: FontFace): string[] {
-  const out: string[] = [];
-  for (const para of text.split('\n')) {
-    let line = '';
-    for (const ch of para) {
-      const next = line + ch;
-      if (line && measure.width(next, font.family, font.size, font.weight) > maxWidth) {
-        out.push(line);
-        line = ch;
-      } else {
-        line = next;
-      }
-    }
-    out.push(line);
-  }
-  return out;
+  return wrapJa(text, maxWidth, measure, font);
 }
 
 export interface TextProps {

@@ -13,6 +13,8 @@ export interface DiagramSvgProps {
   skin: Skin;
   measure: TextMeasurer;
   showTitle?: boolean;
+  /** 入れ子で描くときは背景を塗らない */
+  showBackground?: boolean;
   showCaption?: boolean;
   showCitation?: boolean;
   /** 箱・ポート・警告を重ね描きする */
@@ -45,7 +47,7 @@ export function DiagramSvg(props: DiagramSvgProps): ReactNode {
       xmlnsXlink="http://www.w3.org/1999/xlink"
     >
       <defs>{skin.Defs(ctx)}</defs>
-      {skin.Background(ctx, size)}
+      {props.showBackground !== false && skin.Background(ctx, size)}
       {props.showTitle !== false && skin.Title(ctx, layout.title, diagram.title, diagram.subtitle)}
 
       <g data-layer="figure" transform={fitTransform(layout)}>
