@@ -11,7 +11,7 @@ export const ragDecode: Diagram = {
   nodes: [
     { id: 'docs', kind: 'documents', label: '取得文書', sublabel: '検索は同じ', lane: 'decode', col: 0 },
     { id: 'tok', kind: 'chunker', label: '全部\nトークンに', sublabel: '長い列になる', lane: 'decode', col: 1 },
-    { id: 'dec', kind: 'llm', label: 'デコーダ', sublabel: '全トークンに注意を払う', lane: 'decode', col: 2 },
+    { id: 'dec', kind: 'llm', label: 'デコーダ', sublabel: '全トークンに注意を払う', lane: 'decode', col: 2, opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', sublabel: '最初の 1 語が遅い', lane: 'decode', col: 3 },
   ],
   edges: [

@@ -18,7 +18,7 @@ export const agenticRag: Diagram = {
     { id: 'synth', kind: 'prompt', label: '統合', sublabel: '根拠をまとめる', lane: 'agent', col: 2, row: 0 },
     { id: 'answer', kind: 'answer', label: '回答', sublabel: '引用つき', lane: 'agent', col: 3, row: 0 },
     { id: 'mcp', kind: 'tool', label: 'MCP', sublabel: '道具との接続層', lane: 'tools', col: 1, row: 1, emphasis: 'new' },
-    { id: 't-vec', kind: 'vectordb', label: 'ベクトル DB', lane: 'tools', col: 2, row: 0 },
+    { id: 't-vec', kind: 'vectordb', label: 'ベクトル DB', lane: 'tools', col: 2, row: 0, opens: 'inside-vectordb' },
     { id: 't-web', kind: 'web', label: 'Web 検索', lane: 'tools', col: 2, row: 1 },
     { id: 't-sql', kind: 'index', label: 'SQL', sublabel: '表のデータ', lane: 'tools', col: 2, row: 2 },
     { id: 'observe', kind: 'documents', label: '観測', sublabel: '返ってきた結果', lane: 'tools', col: 3, row: 1 },

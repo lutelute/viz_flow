@@ -1,4 +1,4 @@
-import type { Composition } from '../model/diagram';
+import { diagramsOf, type Composition } from '../model/diagram';
 import { naiveRag } from './rag/naive';
 import { multimodalRag } from './rag/multimodal';
 import { hydeRag } from './rag/hyde';
@@ -16,12 +16,17 @@ import { speculativeRag } from './rag/speculative';
 import { network } from './infra/network';
 import { dataPipeline } from './data/pipeline';
 import { researchProcess } from './research/process';
+import { layers } from './layers';
 
 export interface ContentEntry {
   composition: Composition;
   /** ギャラリーの見出しグループ */
   group: string;
+  /** 「ひらく」で入る中身の図。ギャラリーの印を変える */
+  layer?: boolean;
 }
+
+export const LAYER_GROUP = '部品の中';
 
 const rag8 = [naiveRag, multimodalRag, hydeRag, correctiveRag, graphRag, hybridRag, adaptiveRag, agenticRag];
 
@@ -47,8 +52,22 @@ export const content: ContentEntry[] = [
   { group: '仕組み', composition: { kind: 'single', id: network.id, diagram: network } },
   { group: '仕組み', composition: { kind: 'single', id: dataPipeline.id, diagram: dataPipeline } },
   { group: '仕組み', composition: { kind: 'single', id: researchProcess.id, diagram: researchProcess } },
+  ...layers.map((diagram) => ({ group: LAYER_GROUP, layer: true, composition: { kind: 'single', id: diagram.id, diagram } as Composition })),
 ];
 
+/** 一覧や比較の中の 1 枚も、単体の図として引けるようにする（書き出しで使う）。 */
+const inner = new Map<string, Composition>();
+for (const e of content) {
+  for (const d of diagramsOf(e.composition)) {
+    if (!inner.has(d.id)) inner.set(d.id, { kind: 'single', id: d.id, diagram: d });
+  }
+}
+
+export function hasComposition(id: string | null | undefined): boolean {
+  return !!id && (content.some((c) => c.composition.id === id) || inner.has(id));
+}
+
 export function findComposition(id: string | null | undefined): Composition {
-  return content.find((c) => c.composition.id === id)?.composition ?? content[0].composition;
+  if (!id) return content[0].composition;
+  return content.find((c) => c.composition.id === id)?.composition ?? inner.get(id) ?? content[0].composition;
 }

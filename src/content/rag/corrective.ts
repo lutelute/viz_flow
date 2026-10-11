@@ -19,7 +19,7 @@ export const correctiveRag: Diagram = {
     { id: 'judge', kind: 'router', label: '判定', sublabel: '正しい / 誤り / あいまい', lane: 'correct', col: 3, emphasis: 'new' },
     { id: 'refine', kind: 'chunker', label: '知識の精錬', sublabel: '短冊に分けて選別し、組み直す', lane: 'correct', col: 2, row: 0, emphasis: 'new' },
     { id: 'web', kind: 'web', label: 'Web 検索', sublabel: '質問をキーワードに書き換えて', lane: 'correct', col: 2, row: 1, emphasis: 'new' },
-    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'correct', col: 1 },
+    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'correct', col: 1, opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', lane: 'correct', col: 0 },
   ],
   edges: [

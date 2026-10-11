@@ -17,7 +17,7 @@ export const adaptiveRag: Diagram = {
     { id: 'a', kind: 'router', label: 'A 検索なし', lane: 'routes', col: 2, row: 0, emphasis: 'new' },
     { id: 'b', kind: 'retriever', label: 'B 1 回検索', lane: 'routes', col: 2, row: 1 },
     { id: 'c', kind: 'retriever', label: 'C 多段検索', lane: 'routes', col: 2, row: 2, emphasis: 'new' },
-    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'routes', col: 3, row: 1 },
+    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'routes', col: 3, row: 1, opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', lane: 'routes', col: 3, row: 0 },
   ],
   edges: [

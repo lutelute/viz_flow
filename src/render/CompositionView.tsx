@@ -12,6 +12,7 @@ import { Text } from '../skins/text';
 import { DiagramSvg } from './DiagramSvg';
 import { useTransport } from './useTransport';
 import { figureBounds } from './fit';
+import { OpenHit, type OpenHandlers } from './OpenLayer';
 
 // 複数の図を 1 枚にまとめる形態。grid（8 枚の一覧）と stack（上下の比較）。
 // 時計は 1 つで、短い図は末尾で止まる（lockstep）。
@@ -72,9 +73,22 @@ export const FRAME_SIZE: Record<Exclude<FrameAspect, 'free'>, Size> = {
 /** grid / stack の外寸。single は図そのものの寸法になる。 */
 export function compositionSize(composition: Composition, frame: FrameAspect, cells: CompositionCell[]): Size {
   if (composition.kind === 'single') return cells[0].layout.size;
-  if (frame === 'free') return { width: 1080, height: composition.kind === 'grid' ? 1500 : 1400 };
+  if (frame === 'free') return composition.kind === 'grid' ? freeGridSize(composition.columns, cells) : { width: 1080, height: 1400 };
   return FRAME_SIZE[frame];
 }
+
+/** 画面で一覧を見るときは横に並べる。高さは中身から決め、余白を作らない。 */
+function freeGridSize(columns: number, cells: CompositionCell[]): Size {
+  const cols = Math.max(1, Math.min(columns, cells.length));
+  const width = cols >= 3 ? 1920 : 1080;
+  const cw = (width - GRID.margin * 2 - GRID.gap * (cols - 1)) / cols;
+  const scale = Math.min(...cells.map((c) => cw / c.layout.size.width));
+  const rows = Math.ceil(cells.length / cols);
+  const rowH = Math.max(...cells.map((c) => c.layout.size.height * scale));
+  return { width, height: Math.ceil(GRID.titleH + rows * rowH + GRID.gap * (rows - 1) + GRID.citeH + GRID.margin + 8) };
+}
+
+const GRID = { margin: 40, titleH: 120, citeH: 56, gap: 24 };
 
 export interface CompositionRenderArgs {
   composition: Composition;
@@ -88,6 +102,8 @@ export interface CompositionRenderArgs {
   width?: number | string;
   height?: number | string;
   className?: string;
+  /** 画面でだけ使う。セルを押すとその図をひらく */
+  open?: OpenHandlers;
 }
 
 function cellFrame(cell: CompositionCell, t: number, mode: FrameState['mode']): FrameState {
@@ -99,7 +115,7 @@ function cellFrame(cell: CompositionCell, t: number, mode: FrameState['mode']): 
  * 同じ引数なら同じ要素木を返すので、画面も書き出しもここを通す。
  */
 export function renderComposition(args: CompositionRenderArgs): ReactElement {
-  const { composition, skin, cells, t: time, mode, frame, measure, debug, width, height, className } = args;
+  const { composition, skin, cells, t: time, mode, frame, measure, debug, width, height, className, open } = args;
   const t = skin.tokens;
 
   if (composition.kind === 'single') {
@@ -121,13 +137,13 @@ export function renderComposition(args: CompositionRenderArgs): ReactElement {
   }
 
   const size = compositionSize(composition, frame, cells);
-  const margin = 40;
-  const titleH = 120;
-  const citeH = 56;
+  const { margin, titleH, citeH } = GRID;
   const body: Rect = { x: margin, y: titleH, width: size.width - margin * 2, height: size.height - titleH - citeH - margin };
   const ctx = makeCtx(skin, composition.id, mode, measure);
 
   const slots: Array<{ rect: Rect; heading?: string; scale: number; box: Rect }> = [];
+  /** セルの図が実際に描かれた範囲。ひらくの当たり判定に使う */
+  const drawn: Rect[] = [];
   const boundsOf = (cell: CompositionCell): Rect => {
     const b = figureBounds(cell.layout);
     return b ?? { x: 0, y: 0, width: cell.layout.size.width, height: cell.layout.size.height };
@@ -183,7 +199,7 @@ export function renderComposition(args: CompositionRenderArgs): ReactElement {
       viewBox={`0 0 ${size.width} ${size.height}`}
       width={width ?? size.width}
       height={height ?? size.height}
-      role="img"
+      role={open ? 'group' : 'img'}
       aria-label={composition.title}
       className={className}
       xmlns="http://www.w3.org/2000/svg"
@@ -200,6 +216,7 @@ export function renderComposition(args: CompositionRenderArgs): ReactElement {
         const box = slot.box;
         const tx = inner.x + (inner.width - box.width * s) / 2 - box.x * s;
         const ty = inner.y + (inner.height - box.height * s) / 2 - box.y * s;
+        drawn[i] = { x: tx + box.x * s, y: ty + box.y * s, width: box.width * s, height: box.height * s };
         return (
           <g key={cell.diagram.id}>
             {slot.heading && Text({ x: slot.rect.x, y: slot.rect.y, lines: [slot.heading], font: t.font.lane, fill: t.ink })}
@@ -223,6 +240,17 @@ export function renderComposition(args: CompositionRenderArgs): ReactElement {
         );
       })}
       {skin.Citation(ctx, { x: margin, y: size.height - citeH - 8, width: size.width - margin * 2, height: citeH }, dedupeSources(sources))}
+      {open && (
+        <g data-layer="open">
+          {cells.map((cell, i) => {
+            const it = open.items.find((x) => x.id === cell.diagram.id);
+            if (!it) return null;
+            const r = slots[i].heading ? slots[i].rect : drawn[i];
+            const pad = 6;
+            return <OpenHit key={it.id} ctx={ctx} rect={{ x: r.x - pad, y: r.y - pad, width: r.width + pad * 2, height: r.height + pad * 2 }} radius={8} id={it.id} label={it.label} onOpen={open.onOpen} />;
+          })}
+        </g>
+      )}
     </svg>
   );
 }
@@ -236,10 +264,11 @@ export interface CompositionViewProps {
   width?: number | string;
   height?: number | string;
   className?: string;
+  open?: OpenHandlers;
 }
 
 /** Transport の状態を読んで renderComposition に渡すだけの薄い部品。 */
-export function CompositionView({ composition, skin, model, frame = 'free', debug, width, height, className }: CompositionViewProps): ReactNode {
+export function CompositionView({ composition, skin, model, frame = 'free', debug, width, height, className, open }: CompositionViewProps): ReactNode {
   const state = useTransport(model.transport);
   return renderComposition({
     composition,
@@ -253,6 +282,7 @@ export function CompositionView({ composition, skin, model, frame = 'free', debu
     width,
     height,
     className,
+    open,
   });
 }
 

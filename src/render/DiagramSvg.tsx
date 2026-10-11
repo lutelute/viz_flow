@@ -4,6 +4,7 @@ import type { ResolvedLayout, TextMeasurer } from '../layout/types';
 import type { CompiledStep, FrameState } from '../timeline/types';
 import { makeCtx, type Skin } from '../skins/types';
 import { fitTransform } from './fit';
+import { OpenLayer, type OpenHandlers } from './OpenLayer';
 
 export interface DiagramSvgProps {
   diagram: Diagram;
@@ -19,6 +20,8 @@ export interface DiagramSvgProps {
   showCitation?: boolean;
   /** 箱・ポート・警告を重ね描きする */
   debug?: boolean;
+  /** 画面でだけ使う。ひらける部品に印と当たり判定を重ねる */
+  open?: OpenHandlers;
   /** 省略時は viewBox と同じ寸法 */
   width?: number | string;
   height?: number | string;
@@ -40,7 +43,7 @@ export function DiagramSvg(props: DiagramSvgProps): ReactNode {
       viewBox={`0 0 ${size.width} ${size.height}`}
       width={props.width ?? size.width}
       height={props.height ?? size.height}
-      role="img"
+      role={props.open ? 'group' : 'img'}
       aria-label={label}
       className={props.className}
       xmlns="http://www.w3.org/2000/svg"
@@ -78,6 +81,7 @@ export function DiagramSvg(props: DiagramSvgProps): ReactNode {
           <g key={`${p.id}:${p.edge ?? p.node ?? ''}`}>{skin.Particle(ctx, p)}</g>
         ))}
       </g>
+      {props.open && props.open.items.length > 0 && <OpenLayer ctx={ctx} boxes={layout.nodes} open={props.open} />}
       </g>
 
       {props.showCaption && layout.caption && skin.CaptionStrip(ctx, layout.caption, steps, frame.stepIndex)}

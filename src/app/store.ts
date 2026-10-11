@@ -18,6 +18,8 @@ export interface ShellState {
   postFrame: boolean;
   debug: boolean;
   pending: PendingSeek | null;
+  /** 「ひらく」で入った道のり。テンプレートを変えると空に戻す */
+  openPath: string[];
 }
 
 type Listener = () => void;
@@ -70,6 +72,7 @@ export function stateFromUrl(search: string): ShellState {
     postFrame: false,
     debug: u.debug,
     pending: pendingOf(u),
+    openPath: u.open,
   };
 }
 

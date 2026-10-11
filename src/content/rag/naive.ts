@@ -13,12 +13,12 @@ export const naiveRag: Diagram = {
   ],
   nodes: [
     { id: 'docs', kind: 'documents', label: '文書群', sublabel: 'PDF や社内資料', lane: 'index', col: 0 },
-    { id: 'chunker', kind: 'chunker', label: 'チャンク\n分割', lane: 'index', col: 1 },
-    { id: 'embed', kind: 'embedding', label: '埋め込み\nモデル', sublabel: '文をベクトルにする', lane: 'index', col: 2 },
-    { id: 'vecdb', kind: 'vectordb', label: 'ベクトル DB', sublabel: '近いものを探せる', lane: 'index', col: 3 },
+    { id: 'chunker', kind: 'chunker', label: 'チャンク\n分割', lane: 'index', col: 1, opens: 'inside-chunker' },
+    { id: 'embed', kind: 'embedding', label: '埋め込み\nモデル', sublabel: '文をベクトルにする', lane: 'index', col: 2, opens: 'inside-embedding' },
+    { id: 'vecdb', kind: 'vectordb', label: 'ベクトル DB', sublabel: '近いものを探せる', lane: 'index', col: 3, opens: 'inside-vectordb' },
     { id: 'user', kind: 'user', label: '質問', lane: 'query', col: 0 },
-    { id: 'prompt', kind: 'prompt', label: 'プロンプト\nテンプレート', lane: 'query', col: 1 },
-    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '文章を生成する', lane: 'query', col: 2 },
+    { id: 'prompt', kind: 'prompt', label: 'プロンプト\nテンプレート', lane: 'query', col: 1, opens: 'inside-prompt' },
+    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '文章を生成する', lane: 'query', col: 2, opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', lane: 'query', col: 3 },
   ],
   edges: [

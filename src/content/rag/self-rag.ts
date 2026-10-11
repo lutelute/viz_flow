@@ -12,7 +12,7 @@ export const selfRag: Diagram = {
   ],
   nodes: [
     { id: 'user', kind: 'user', label: '質問', lane: 'gen', col: 0, row: 0 },
-    { id: 'gen', kind: 'llm', label: '生成器', sublabel: '特殊トークンも学習済み', lane: 'gen', col: 1, row: 0, emphasis: 'new' },
+    { id: 'gen', kind: 'llm', label: '生成器', sublabel: '特殊トークンも学習済み', lane: 'gen', col: 1, row: 0, emphasis: 'new', opens: 'inside-llm' },
     { id: 'retrieveq', kind: 'router', label: '検索する？', sublabel: 'Retrieve トークン', lane: 'gen', col: 2, row: 0, emphasis: 'new' },
     { id: 'ret', kind: 'retriever', label: '検索', sublabel: 'K 件', lane: 'gen', col: 3, row: 0, emphasis: 'muted' },
     { id: 'drafts', kind: 'chunker', label: '続きを\n並列に生成', sublabel: '文書ごとに 1 案', lane: 'gen', col: 3, row: 1, emphasis: 'new' },

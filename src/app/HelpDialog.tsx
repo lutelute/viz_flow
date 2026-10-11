@@ -39,9 +39,6 @@ export function HelpDialog({ open, onClose }: HelpDialogProps) {
           </tbody>
         </table>
         <p className="ui-note">{S.help.note}</p>
-        <p className="ui-note">
-          <a href={S.legacy.link}>{S.legacy.note}</a>
-        </p>
       </div>
       <div className="dlg__foot">
         <button type="button" className="ui-btn" onClick={onClose}>

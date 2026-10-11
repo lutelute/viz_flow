@@ -9,6 +9,7 @@ import { layoutStyleOf, type Skin } from '../skins/types';
 import { useSkinFonts } from '../skins/fonts';
 import { DiagramSvg } from './DiagramSvg';
 import { useTransport } from './useTransport';
+import type { OpenHandlers } from './OpenLayer';
 
 /** フォントの読み込み前後で測定キャッシュを分けるため、キーごとに測定器を作り直す。 */
 function freshMeasurer(key: string): TextMeasurer {
@@ -53,9 +54,10 @@ export interface DiagramPlayerProps {
   width?: number | string;
   height?: number | string;
   className?: string;
+  open?: OpenHandlers;
 }
 
-export function DiagramPlayer({ diagram, skin, model, debug, showCaption, width, height, className }: DiagramPlayerProps): ReactNode {
+export function DiagramPlayer({ diagram, skin, model, debug, showCaption, width, height, className, open }: DiagramPlayerProps): ReactNode {
   const { timeline, transport, layout } = model;
   const state = useTransport(transport);
   const measure = useMemo(() => freshMeasurer(`${skin.id}:${model.fontStatus}`), [skin.id, model.fontStatus]);
@@ -82,6 +84,7 @@ export function DiagramPlayer({ diagram, skin, model, debug, showCaption, width,
       measure={measure}
       debug={debug}
       showCaption={showCaption}
+      open={open}
       width={width}
       height={height}
       className={className}

@@ -13,12 +13,12 @@ export const ragFusion: Diagram = {
   ],
   nodes: [
     { id: 'user', kind: 'user', label: '質問', lane: 'expand', col: 0, row: 1 },
-    { id: 'rewrite', kind: 'llm', label: 'LLM で\n言い換え', sublabel: '視点の違う 3 本', lane: 'expand', col: 1, row: 1, emphasis: 'new' },
+    { id: 'rewrite', kind: 'llm', label: 'LLM で\n言い換え', sublabel: '視点の違う 3 本', lane: 'expand', col: 1, row: 1, emphasis: 'new', opens: 'inside-llm' },
     { id: 's1', kind: 'retriever', label: '検索 1', lane: 'expand', col: 2, row: 0 },
     { id: 's2', kind: 'retriever', label: '検索 2', lane: 'expand', col: 2, row: 1 },
     { id: 's3', kind: 'retriever', label: '検索 3', lane: 'expand', col: 2, row: 2 },
-    { id: 'rrf', kind: 'reranker', label: 'RRF で融合', sublabel: '順位だけを使う', lane: 'expand', col: 3, row: 1, emphasis: 'new' },
-    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'answer', col: 3 },
+    { id: 'rrf', kind: 'reranker', label: 'RRF で融合', sublabel: '順位だけを使う', lane: 'expand', col: 3, row: 1, emphasis: 'new', opens: 'inside-rrf' },
+    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '回答を書く', lane: 'answer', col: 3, opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', lane: 'answer', col: 2 },
   ],
   edges: [

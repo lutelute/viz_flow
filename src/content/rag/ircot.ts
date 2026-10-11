@@ -12,7 +12,7 @@ export const ircot: Diagram = {
     { id: 'user', kind: 'user', label: '質問', sublabel: '多段の問い', lane: 'loop', col: 0, row: 0 },
     { id: 'ret', kind: 'retriever', label: '検索', sublabel: '最新の文で', lane: 'loop', col: 1, row: 0 },
     { id: 'docs', kind: 'documents', label: '集めた段落', sublabel: '取り直すたびに増える', lane: 'loop', col: 2, row: 0, emphasis: 'new' },
-    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '推論文を 1 文だけ書く', lane: 'loop', col: 3, row: 0, emphasis: 'new' },
+    { id: 'llm', kind: 'llm', label: 'LLM', sublabel: '推論文を 1 文だけ書く', lane: 'loop', col: 3, row: 0, emphasis: 'new', opens: 'inside-llm' },
     { id: 'answer', kind: 'answer', label: '回答', lane: 'loop', col: 3, row: 1 },
   ],
   edges: [

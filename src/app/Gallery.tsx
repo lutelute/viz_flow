@@ -74,7 +74,7 @@ export function Gallery({ value, onChange }: GalleryProps) {
                       {selected ? '▶' : ''}
                     </span>
                     <span className="gallery__title">{titleOf(e)}</span>
-                    <span className="gallery__kind">{S.kinds[e.composition.kind]}</span>
+                    <span className="gallery__kind">{e.layer ? S.kinds.layer : S.kinds[e.composition.kind]}</span>
                   </button>
                 );
               })}

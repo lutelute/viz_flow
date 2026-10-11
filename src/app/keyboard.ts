@@ -17,6 +17,8 @@ export interface KeyActions {
   copyUrl(): void;
   openHelp(): void;
   close(): void;
+  /** 「ひらく」で入った段から 1 つ上へ */
+  up(): void;
 }
 
 export const FRAME_SEC = 1 / 30;
@@ -28,7 +30,9 @@ function isEditable(el: Element | null): boolean {
 }
 
 function isActivatable(el: Element | null): boolean {
-  return el instanceof HTMLButtonElement || el instanceof HTMLAnchorElement || (el instanceof HTMLElement && el.getAttribute('role') === 'tab');
+  if (el instanceof HTMLButtonElement || el instanceof HTMLAnchorElement) return true;
+  const role = el?.getAttribute('role');
+  return role === 'tab' || role === 'button';
 }
 
 function insideOpenDialog(el: Element | null): boolean {
@@ -77,6 +81,7 @@ export function dispatchKey(e: KeyboardEvent, a: KeyActions): boolean {
     case '2':
     case '3':
     case '4':
+    case '5':
       a.pickStyle(Number(e.key) - 1);
       return true;
     case 'd':
@@ -96,6 +101,10 @@ export function dispatchKey(e: KeyboardEvent, a: KeyActions): boolean {
       return true;
     case 'Escape':
       a.close();
+      return true;
+    case 'Backspace':
+      if (onButton) return false;
+      a.up();
       return true;
     default:
       return false;
