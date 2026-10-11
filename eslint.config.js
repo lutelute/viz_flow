@@ -20,4 +20,13 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // スキンと描画層は Fast Refresh の対象ではない（描画関数の束を export する）
+    files: ['src/skins/**/*.tsx', 'src/render/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    files: ['scripts/**/*.ts'],
+    languageOptions: { globals: { ...globals.node } },
+  },
 ])

@@ -37,6 +37,7 @@ frames/
 shots/current/
 shots/diff/
 test-results/
+.vitest/
 *.mp4
 *.mov
 *.webm
