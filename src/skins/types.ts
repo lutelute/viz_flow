@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { DiagramEdge, DiagramGroup, DiagramNode, Lane, NodeKind, PayloadKind, Source, ToneId } from '../model/diagram';
 import type { EdgeGeom, LayoutStyle, NodeBox, Pt, Rect, Size, TextMeasurer } from '../layout/types';
 import type { CompiledStep, FrameState, NodeState, ParticleFrame, Phase } from '../timeline/types';
+import type { LabelRoom } from '../render/label-room';
 
 export type SkinId = 'sketch' | 'blueprint' | 'editorial' | 'neon' | 'plain' | 'plain-dark';
 
@@ -62,6 +63,8 @@ export interface RenderCtx {
   /** 手描き様式の決定性のため。fnv1a(diagramId + key) */
   seed: (key: string) => number;
   measure: TextMeasurer;
+  /** 動く粒子の字を、番号やラベルに重ねずに出すための下調べ。単体の図を描くときだけある */
+  labelRoom?: LabelRoom;
 }
 
 /**
@@ -122,6 +125,6 @@ export function fnv1a(s: string): number {
   return h >>> 0;
 }
 
-export function makeCtx(skin: Skin, diagramId: string, mode: FrameState['mode'], measure: TextMeasurer): RenderCtx {
-  return { skin, diagramId, mode, measure, seed: (key) => fnv1a(`${diagramId}#${key}`) };
+export function makeCtx(skin: Skin, diagramId: string, mode: FrameState['mode'], measure: TextMeasurer, labelRoom?: LabelRoom): RenderCtx {
+  return { skin, diagramId, mode, measure, labelRoom, seed: (key) => fnv1a(`${diagramId}#${key}`) };
 }

@@ -22,9 +22,9 @@ export const adaptiveRag: Diagram = {
   ],
   edges: [
     { id: 'e-user-cls', from: 'user', to: 'cls' },
-    { id: 'e-cls-a', from: 'cls', to: 'a', label: 'A', role: 'branch', branch: { group: 'k', option: 'a' }, fromSide: 'bottom', toSide: 'left', tone: 'ok' },
-    { id: 'e-cls-b', from: 'cls', to: 'b', label: 'B', role: 'branch', branch: { group: 'k', option: 'b' }, fromSide: 'bottom', toSide: 'left', tone: 'accent1' },
-    { id: 'e-cls-c', from: 'cls', to: 'c', label: 'C', role: 'branch', branch: { group: 'k', option: 'c' }, fromSide: 'bottom', toSide: 'left', tone: 'warn' },
+    { id: 'e-cls-a', from: 'cls', to: 'a', role: 'branch', branch: { group: 'k', option: 'a' }, fromSide: 'bottom', toSide: 'left', tone: 'ok' },
+    { id: 'e-cls-b', from: 'cls', to: 'b', role: 'branch', branch: { group: 'k', option: 'b' }, fromSide: 'bottom', toSide: 'left', tone: 'accent1' },
+    { id: 'e-cls-c', from: 'cls', to: 'c', role: 'branch', branch: { group: 'k', option: 'c' }, fromSide: 'bottom', toSide: 'left', tone: 'warn' },
     { id: 'e-a-llm', from: 'a', to: 'llm' },
     { id: 'e-b-llm', from: 'b', to: 'llm' },
     { id: 'e-c-llm', from: 'c', to: 'llm' },
@@ -54,18 +54,21 @@ export const adaptiveRag: Diagram = {
     {
       n: 2,
       short: 'A',
+      // 幹の 3 本の線のそばは混むので、経路が行き先の部品に入る手前に置く
+      badge: { edge: 'e-cls-a', at: 0.8 },
       caption: 'A なら検索せず、質問をそのまま LLM に渡す',
       actions: [
-        { type: 'travel', particle: 'qa', edges: ['e-cls-a'], payload: { kind: 'query', label: '質問', tone: 'ok' } },
+        { type: 'travel', particle: 'qa', edges: ['e-cls-a'], payload: { kind: 'query', label: 'A', tone: 'ok' } },
         { type: 'travel', particle: 'qa', edges: ['e-a-llm'], payload: { kind: 'query', label: '質問', tone: 'ok' } },
       ],
     },
     {
       n: 3,
       short: 'B',
+      badge: { edge: 'e-cls-b', at: 0.85 },
       caption: 'B なら 1 回だけ検索し、取れた文書と質問を LLM に渡す',
       actions: [
-        { type: 'travel', particle: 'qb', edges: ['e-cls-b'], payload: { kind: 'query', label: '質問', tone: 'accent1' } },
+        { type: 'travel', particle: 'qb', edges: ['e-cls-b'], payload: { kind: 'query', label: 'B', tone: 'accent1' } },
         { type: 'dwell', particle: 'qb', node: 'b', seconds: 0.6, label: '検索中' },
         { type: 'travel', particle: 'qb', edges: ['e-b-llm'], payload: { kind: 'chunks', label: '文書と質問', tone: 'accent1', count: 3 } },
       ],
@@ -73,9 +76,10 @@ export const adaptiveRag: Diagram = {
     {
       n: 4,
       short: 'C',
+      badge: { edge: 'e-cls-c', at: 0.88 },
       caption: 'C なら推論文を 1 文書いては、その文で検索し直す往復を繰り返す（IRCoT）',
       actions: [
-        { type: 'travel', particle: 'qc', edges: ['e-cls-c'], payload: { kind: 'query', label: '質問', tone: 'warn' } },
+        { type: 'travel', particle: 'qc', edges: ['e-cls-c'], payload: { kind: 'query', label: 'C', tone: 'warn' } },
         { type: 'dwell', particle: 'qc', node: 'c', seconds: 0.6, label: '検索中' },
         { type: 'travel', particle: 'qc', edges: ['e-c-llm'], payload: { kind: 'chunks', label: '文書', tone: 'warn', count: 3 } },
         { type: 'travel', particle: 'qc', edges: ['e-llm-c'], payload: { kind: 'text', label: '推論文', tone: 'warn' } },

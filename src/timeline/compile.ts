@@ -1,6 +1,6 @@
 import type { Diagram, DiagramEdge, DiagramNode, Payload, Step, StepAction, BadgeAnchor } from '../model/diagram';
 import type { EdgeGeom, NodeBox, Pt, ResolvedLayout } from '../layout/types';
-import { posAt } from '../core/particle-math';
+import { offsetOnRoute, settleBadges, type BadgeSeed } from './badge-place';
 import type { CompiledParticle, CompiledStep, CompiledTimeline, Track } from './types';
 
 export interface CompileOptions {
@@ -25,9 +25,6 @@ const DEFAULTS = {
   tail: 1.5,
   minTravelSec: 0.6,
 };
-
-/** バッジを経路から離す距離（px） */
-const BADGE_OFFSET = 26;
 
 interface ExpandedStep {
   step: Step;
@@ -102,27 +99,16 @@ function nodeCorner(box: NodeBox, corner: 'ne' | 'nw' | 'se' | 'sw' = 'ne'): Pt 
   }
 }
 
-/** 経路上の位置 at から、進行方向の左手側（上向きの線なら左、右向きの線なら上）に BADGE_OFFSET だけ離した点 */
+/** 経路上の位置 at に置く番号。ラベルの無い辺では画面の上側（縦の線なら左側）、ある辺ではラベルの反対側 */
 function badgeOnRoute(geom: EdgeGeom, at: number): Pt {
-  const route = geom.route;
-  if (route.totalLen === 0) return geom.badgeAt;
-  const eps = Math.min(0.01, 1 / route.totalLen);
-  const t0 = Math.max(0, Math.min(1 - eps, at));
-  const p = posAt(route, at);
-  const a = posAt(route, t0);
-  const b = posAt(route, t0 + eps);
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len === 0) return geom.badgeAt;
-  const left = { x: p.x + (dy / len) * BADGE_OFFSET, y: p.y - (dx / len) * BADGE_OFFSET };
+  const left = offsetOnRoute(geom, at, 1);
+  const right = offsetOnRoute(geom, at, -1);
+  if (!left || !right) return geom.badgeAt;
   if (!geom.label) {
-    // 画面の上側（縦の線なら左側）に寄せる。粒子のラベルは下に出るため
-    const goesDown = left.y > p.y + 0.01 || (Math.abs(left.y - p.y) <= 0.01 && left.x > p.x);
-    return goesDown ? { x: 2 * p.x - left.x, y: 2 * p.y - left.y } : left;
+    // 粒子のラベルは下に出るため、上（縦の線なら左）に寄せる
+    const leftIsUp = left.y < right.y - 0.01 || (Math.abs(left.y - right.y) <= 0.01 && left.x < right.x);
+    return leftIsUp ? left : right;
   }
-  // ラベルがある辺では、ラベルと反対側に置く
-  const right = { x: p.x - (dy / len) * BADGE_OFFSET, y: p.y + (dx / len) * BADGE_OFFSET };
   const lp = geom.label.pos;
   const dl = Math.hypot(left.x - lp.x, left.y - lp.y);
   const dr = Math.hypot(right.x - lp.x, right.y - lp.y);
@@ -150,6 +136,7 @@ class Compiler {
   run(): CompiledTimeline {
     const expanded = expandLoops(this.diagram.steps, this.diagram.loops);
     const steps: CompiledStep[] = [];
+    const seeds: BadgeSeed[] = [];
     let cursor = this.opt.leadIn;
 
     expanded.forEach(({ step, repeat }, index) => {
@@ -164,6 +151,8 @@ class Compiler {
         if (lane) targets.lanes.add(lane);
       }
       const t1 = stepEnd + (step.hold ?? this.opt.holdSec);
+      const seed = this.badgeOf(step, targets);
+      seeds.push(seed);
       steps.push({
         index,
         n: step.n,
@@ -173,13 +162,17 @@ class Compiler {
         short: step.short,
         detail: step.detail,
         repeat,
-        badge: this.badgeOf(step, targets),
+        badge: seed.pt,
         nodes: [...targets.nodes],
         edges: [...targets.edges],
         lanes: [...targets.lanes],
         groups: [...targets.groups],
       });
       cursor = t1;
+    });
+
+    settleBadges(this.layout, seeds).forEach((pt, i) => {
+      steps[i].badge = pt;
     });
 
     const duration = cursor + this.opt.tail;
@@ -387,27 +380,38 @@ class Compiler {
     return b;
   }
 
-  private badgeOf(step: Step, targets: StepTargets): Pt {
-    if (step.badge) return this.anchorPoint(step, step.badge);
-    const firstTravel = step.actions.find((a) => a.type === 'travel');
-    if (firstTravel && firstTravel.type === 'travel' && firstTravel.edges.length > 0) {
-      return this.geomOf(step, firstTravel.edges[0]).badgeAt;
+  private badgeOf(step: Step, targets: StepTargets): BadgeSeed {
+    const key = step;
+    if (step.badge) return { ...this.anchorSeed(step, step.badge), key };
+    const travelled = [...new Set(step.actions.flatMap((a) => (a.type === 'travel' ? a.edges : [])))];
+    if (travelled.length > 0) {
+      const alts = travelled.slice(1).map((id) => this.edgeSeed(step, id)) as Array<{ geom: EdgeGeom; at: number }>;
+      return { ...this.edgeSeed(step, travelled[0]), alts, key };
     }
     const firstDwell = step.actions.find((a) => a.type === 'dwell');
-    if (firstDwell && firstDwell.type === 'dwell') return nodeCorner(this.boxOf(firstDwell.node));
+    if (firstDwell && firstDwell.type === 'dwell') return { pt: nodeCorner(this.boxOf(firstDwell.node)), key };
     const firstEdge = targets.edges.values().next();
-    if (!firstEdge.done) return this.geomOf(step, firstEdge.value).badgeAt;
+    if (!firstEdge.done) return { ...this.edgeSeed(step, firstEdge.value), key };
     const firstNode = targets.nodes.values().next();
-    if (!firstNode.done) return nodeCorner(this.boxOf(firstNode.value));
-    return { x: this.layout.figure.x, y: this.layout.figure.y };
+    if (!firstNode.done) return { pt: nodeCorner(this.boxOf(firstNode.value)), key };
+    return { pt: { x: this.layout.figure.x, y: this.layout.figure.y }, key };
   }
 
-  private anchorPoint(step: Step, anchor: BadgeAnchor): Pt {
+  /** 辺の既定の位置（ラベルと同じ labelAt）に付く番号 */
+  private edgeSeed(step: Step, id: string): Omit<BadgeSeed, 'key'> {
+    const geom = this.geomOf(step, id);
+    const e = this.edgeById.get(id);
+    const at = e?.labelAt ?? (e?.role === 'branch' ? 0.35 : 0.5);
+    return { pt: geom.badgeAt, geom, at };
+  }
+
+  private anchorSeed(step: Step, anchor: BadgeAnchor): Omit<BadgeSeed, 'key'> {
     if ('edge' in anchor) {
+      if (anchor.at === undefined) return this.edgeSeed(step, anchor.edge);
       const geom = this.geomOf(step, anchor.edge);
-      return anchor.at === undefined ? geom.badgeAt : badgeOnRoute(geom, anchor.at);
+      return { pt: badgeOnRoute(geom, anchor.at), geom, at: anchor.at };
     }
-    return nodeCorner(this.boxOf(anchor.node), anchor.corner);
+    return { pt: nodeCorner(this.boxOf(anchor.node), anchor.corner) };
   }
 }
 

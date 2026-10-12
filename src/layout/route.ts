@@ -551,10 +551,12 @@ class Router {
   }
 
   /** ラベル候補の悪さ。ノードに重なれば大、他の線に触れれば中、レーンの帯に入れば面積に応じて小 */
-  private labelPenalty(box: Rect, selfId: string, others: Array<{ id: string; points: Pt[] }>): number {
+  private labelPenalty(box: Rect, selfId: string, others: Array<{ id: string; points: Pt[] }>, lanes = true): number {
     let penalty = 0;
     for (const n of this.nodes.values()) {
-      if (segmentHitsRect({ x: box.x, y: box.y }, { x: box.x + box.width, y: box.y + box.height }, { x: n.x, y: n.y, width: n.w, height: n.h }, 0)) penalty += 1000;
+      const ox = Math.min(box.x + box.width, n.x + n.w) - Math.max(box.x, n.x);
+      const oy = Math.min(box.y + box.height, n.y + n.h) - Math.max(box.y, n.y);
+      if (ox > 1 && oy > 1) penalty += 1000;
     }
     for (const o of others) {
       if (o.id === selfId) continue;
@@ -562,6 +564,7 @@ class Router {
         if (segmentHitsRect(o.points[i], o.points[i + 1], box, 0)) penalty += 100;
       }
     }
+    if (!lanes) return penalty;
     for (const lane of this.lanes.values()) {
       const ox = Math.min(box.x + box.width, lane.x + lane.width) - Math.max(box.x, lane.x);
       const oy = Math.min(box.y + box.height, lane.y + lane.height) - Math.max(box.y, lane.y);
@@ -579,7 +582,7 @@ class Router {
 
   /**
    * ラベルは labelAt の位置から法線方向に font.edge.size × 0.9 離す。既定は進行方向の左手側。
-   * レーンの隙間を走る線では、ノードや他の線やレーンの帯に掛かりにくい側を選ぶ。
+   * 部品や他の線に掛かるときは反対側を選ぶ。レーンの隙間を走る線では、レーンの帯に掛かる面積も比べる。
    */
   private labelFor(
     e: DiagramEdge,
@@ -610,13 +613,13 @@ class Router {
       return { pos, anchor: 'middle', lines, box: { x: pos.x - w / 2, y: pos.y - h / 2, width: w, height: h } };
     };
     let label = place(n);
-    if (!this.inLane(pt)) {
-      const flipped = { x: -n.x, y: -n.y };
-      const alt = place(flipped);
-      if (this.labelPenalty(alt.box, e.id, others) < this.labelPenalty(label.box, e.id, others)) {
-        label = alt;
-        n = flipped;
-      }
+    // レーンの隙間では帯に掛かる面積も比べる。レーンの中では帯は両側とも同じなので、部品と線だけで比べる
+    const lanes = !this.inLane(pt);
+    const flipped = { x: -n.x, y: -n.y };
+    const alt = place(flipped);
+    if (this.labelPenalty(alt.box, e.id, others, lanes) < this.labelPenalty(label.box, e.id, others, lanes)) {
+      label = alt;
+      n = flipped;
     }
     return { label, badgeAt: badge(n), axis };
   }

@@ -5,6 +5,7 @@ import type { CompiledStep, FrameState } from '../timeline/types';
 import { makeCtx, type Skin } from '../skins/types';
 import { fitTransform } from './fit';
 import { OpenLayer, type OpenHandlers } from './OpenLayer';
+import { labelRoomFor } from './label-room';
 
 export interface DiagramSvgProps {
   diagram: Diagram;
@@ -34,7 +35,7 @@ export interface DiagramSvgProps {
  */
 export function DiagramSvg(props: DiagramSvgProps): ReactNode {
   const { diagram, layout, frame, steps, skin, measure, debug } = props;
-  const ctx = makeCtx(skin, diagram.id, frame.mode, measure);
+  const ctx = makeCtx(skin, diagram.id, frame.mode, measure, labelRoomFor(layout, steps, measure, skin.tokens.font.label));
   const { size } = layout;
   const label = `${diagram.title}の流れ。` + steps.map((s) => `${s.n} ${s.caption}`).join('、');
 

@@ -44,7 +44,7 @@ export function straightEdge(id: string, from: NodeBox, to: NodeBox): EdgeGeom {
     route: buildSegments([p0, p1]),
     arrowAt: p1,
     arrowAngle: 0,
-    badgeAt: { x: (p0.x + p1.x) / 2, y: p0.y - 14 },
+    badgeAt: { x: (p0.x + p1.x) / 2, y: p0.y - 26 },
   };
 }
 

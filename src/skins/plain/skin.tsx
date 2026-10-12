@@ -6,6 +6,7 @@ import type { FontFace, RenderCtx, Skin, SkinTokens } from '../types';
 import { NODE_GLYPHS, nodeGlyph } from '../icons';
 import { Text, textHeight, wrapLines } from '../text';
 import { formatSource } from '../sketch/skin';
+import { labelBox } from '../../render/label-room';
 
 // 略図。丸の中のアイコンと短い名前だけで部品を表し、細い線と小さな点で流れを見せる。
 // 箱は描かない。色は墨と灰に、意味のある 3 色（藍・錆・緑）だけを足す。補足は描かない。
@@ -399,10 +400,23 @@ function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
 
   const color = t.tone[shown.tone ?? t.payloadTone[shown.kind]];
   const stacked = shown.kind === 'chunks' && (shown.count ?? 1) >= 3;
-  const label = pf.phase === 'travel' ? shown.label : undefined;
   const f = t.font.particle;
+  let label = pf.phase === 'travel' ? shown.label : undefined;
   const labelW = label ? ctx.measure.width(label, f.family, f.size, f.weight) : 0;
-  const labelY = PARTICLE_R + 2 + t.particle.labelGap;
+  // 字の札の大きさと、粒子の中心から札の近い辺までの距離
+  const plateW = labelW + 8;
+  const plateH = f.size + 5;
+  const gap = PARTICLE_R + t.particle.labelGap;
+  // 札の位置。粒子の中心からの相対。下調べが無い（並べて描く図など）ときは線の下の中央
+  let plate = { x: -plateW / 2, y: gap };
+  const room = ctx.labelRoom;
+  if (label && room && pf.edge) {
+    // 辺ごとに決めた側に出し、そこでも番号やラベルに掛かる間だけ字を伏せる
+    const side = room.side(pf.edge, plateW, plateH, gap);
+    const box = labelBox({ x, y }, pf.heading, plateW, plateH, gap, side);
+    if (room.blocked(box)) label = undefined;
+    plate = { x: box.x - x, y: box.y - y };
+  }
 
   return (
     <g transform={`translate(${num(x)} ${num(y)}) scale(${scale.toFixed(3)})`}>
@@ -411,8 +425,8 @@ function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
         : dot(pal, 'c', 0, 0, PARTICLE_R, color, shown.ghost)}
       {label && scale > 0.6 && (
         <g transform={`scale(${(1 / scale).toFixed(3)})`}>
-          <rect x={-labelW / 2 - 4} y={labelY - 2} width={labelW + 8} height={f.size + 5} rx={5} fill={pal.paper} />
-          {Text({ x: 0, y: labelY, lines: [label], font: f, fill: color, anchor: 'middle' })}
+          <rect x={plate.x} y={plate.y} width={plateW} height={plateH} rx={5} fill={pal.paper} />
+          {Text({ x: plate.x + plateW / 2, y: plate.y + 2, lines: [label], font: f, fill: color, anchor: 'middle' })}
         </g>
       )}
     </g>
