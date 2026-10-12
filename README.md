@@ -109,9 +109,11 @@ export const myFlow: Diagram = {
 | blueprint | 製図 | BIZ UDGothic、M PLUS 1 Code | 方眼、藍 1 色、部品記号、表題欄 |
 | editorial | 誌面 | Shippori Mincho B1、Zen Kaku Gothic New | 無地、墨と朱と藍の 3 色、罫線 |
 | neon | ネオン | BIZ UDPGothic | 暗い背景、3 色、粒子だけが光る |
-| plain | 略図 | Zen Maru Gothic | 丸の中に図記号、下に名前だけ。補足と番号横の語は省く。差し色は藍・錆・緑 |
+| plain | 略図 | Zen Maru Gothic | 丸の中に図記号、下に名前だけ。補足と番号横の語は省く。差し色は藍・錆・緑。暗い版がある |
 
 フォントは Google Fonts（SIL Open Font License）から読む。様式を切り替えてもノードの列と行は変わらない。
+
+略図だけは明るい版と暗い版を持つ。画面をダークにすると図も暗い版になり、書き出しもそのまま暗い図で出る（ファイル名は `plain-dark`）。明暗を選んでいなければ OS の設定に従う。どちらの版も、字は地と帯に 4.5:1、線は 3:1 を超えるようにしてあり、テストで確かめている。
 
 ## 開発
 

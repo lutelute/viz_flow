@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { content, findComposition } from '../content';
 import { diagramsOf, type Composition } from '../model/diagram';
 import type { FrameAspect } from '../layout/types';
-import { getSkin, skinList } from '../skins';
+import { skinFor, skinList } from '../skins';
 import type { Skin } from '../skins/types';
 import { CompositionView, useCompositionModel, type CompositionModel } from '../render/CompositionView';
 import { DiagramPlayer, usePlayerModel } from '../render/DiagramPlayer';
@@ -39,7 +39,7 @@ const SIZES: Record<string, { aspect: FrameAspect; width: number; height: number
 export function ExportRoute(): ReactNode {
   const params = new URLSearchParams(window.location.search);
   const composition = findComposition(params.get('t'));
-  const skin = getSkin(params.get('style'));
+  const skin = skinFor(params.get('style'), params.get('theme') === 'dark');
   const size = SIZES[params.get('size') ?? '4x5'] ?? SIZES['4x5'];
   const transparent = params.get('bg') === 'none';
   if (params.get('harness') === '1') void import('../export/devHarness').then((m) => m.installExportHarness());

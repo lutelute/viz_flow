@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { findComposition } from '../content';
 import { diagramsOf, type Source } from '../model/diagram';
-import { getSkin, skinList, type SkinId } from '../skins';
+import { getSkin, hasDarkTwin, skinFor, skinList, type SkinId } from '../skins';
 import { fontsHref } from '../skins/fonts';
 import type { FontSpec } from '../skins/types';
 import { usePlayerModel } from '../render/DiagramPlayer';
@@ -35,6 +35,7 @@ import './tokens.css';
 import './shell.css';
 
 const NARROW = '(max-width: 1099px)';
+const OS_DARK = '(prefers-color-scheme: dark)';
 const UI_FONT_LINK_ID = 'ui-fonts';
 const UI_FONTS: FontSpec[] = [{ family: 'BIZ UDPGothic', googleId: 'BIZ+UDPGothic', weights: [400, 700] }];
 
@@ -93,11 +94,13 @@ export function App() {
   const isSingle = view.kind === 'single';
   const viewKey = `${templateId}|${path.join('/')}`;
   const openables = useMemo(() => openablesOf(view), [view]);
-  const skin = getSkin(styleId);
   const diagram = isSingle ? view.diagram : diagramsOf(view)[0];
   const reduced = usePrefersReducedMotion();
   const narrow = useMediaQuery(NARROW);
-  const dark = theme ? theme === 'dark' : skin.tokens.dark;
+  const osDark = useMediaQuery(OS_DARK);
+  // 明暗を選んでいなければ、暗い版を持つ様式は OS の設定に、持たない様式はその様式の地に合わせる
+  const dark = theme ? theme === 'dark' : hasDarkTwin(styleId) ? osDark : getSkin(styleId).tokens.dark;
+  const skin = skinFor(styleId, dark);
 
   const player = usePlayerModel(diagram, skin, postFrame ? '4:5' : 'free', !reduced);
   const multi = useCompositionModel(view, skin, !reduced);
@@ -278,7 +281,7 @@ export function App() {
           closeDialog();
         }}
         templateId={view.id}
-        styleId={styleId}
+        styleId={skin.id}
         steps={timeline.steps}
         duration={timeline.duration}
         currentT={dialog === 'export' ? state.t : 0}

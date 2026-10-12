@@ -3,7 +3,7 @@ import type { DiagramEdge, DiagramGroup, DiagramNode, Lane, NodeKind, PayloadKin
 import type { EdgeGeom, LayoutStyle, NodeBox, Pt, Rect, Size, TextMeasurer } from '../layout/types';
 import type { CompiledStep, FrameState, NodeState, ParticleFrame, Phase } from '../timeline/types';
 
-export type SkinId = 'sketch' | 'blueprint' | 'editorial' | 'neon' | 'plain';
+export type SkinId = 'sketch' | 'blueprint' | 'editorial' | 'neon' | 'plain' | 'plain-dark';
 
 export interface FontSpec {
   family: string;

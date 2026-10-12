@@ -11,31 +11,57 @@ import { formatSource } from '../sketch/skin';
 // 箱は描かない。色は墨と灰に、意味のある 3 色（藍・錆・緑）だけを足す。補足は描かない。
 // 面はすべて不透明。グラデーション・ぼかし・発光・半透明は使わない。
 
-const PAPER = '#F8F8F6';
-const BAND = '#EFF0EC';
-const DISC = '#E1E4E2';
-const DISC_MUTED = '#EBEDEA';
-const INK = '#25282B';
-const INK_SOFT = '#6B7074';
-const LINE = '#8F969A';
-const LINE_SOFT = '#C4C9CB';
-const BLUE = '#3C6E9F';
-const RUST = '#BF5B3D';
-const GREEN = '#4A8A5E';
+/** 図の色の組。明るい版と、画面をダークにしたときの暗い版を同じ形で持つ。 */
+interface Palette {
+  paper: string;
+  band: string;
+  disc: string;
+  discMuted: string;
+  ink: string;
+  inkSoft: string;
+  line: string;
+  lineSoft: string;
+  blue: string;
+  rust: string;
+  green: string;
+}
 
-const tone: Record<ToneId, string> = {
-  ink: INK,
-  accent1: BLUE,
-  accent2: RUST,
-  accent3: GREEN,
-  ok: GREEN,
-  ng: RUST,
-  warn: RUST,
-  muted: LINE,
+// 字は地と帯の両方に 4.5:1、線は 3:1 を超える（WCAG 1.4.3 と 1.4.11）
+const LIGHT: Palette = {
+  paper: '#F8F8F6',
+  band: '#EFF0EC',
+  disc: '#E1E4E2',
+  discMuted: '#EBEDEA',
+  ink: '#25282B',
+  inkSoft: '#676C70',
+  line: '#848B8E',
+  lineSoft: '#C4C9CB',
+  blue: '#3C6E9F',
+  rust: '#AB5137',
+  green: '#407751',
 };
 
+// 画面のダーク（--ui-surface）に地を寄せ、丸・線・字は明るさの順を明るい版と逆にする。
+// 3 色は暗い地で読めるよう明るくし、色相は明るい版と同じにする
+const DARK: Palette = {
+  paper: '#232528',
+  band: '#2A2D31',
+  disc: '#3A3F44',
+  discMuted: '#30343A',
+  ink: '#E8EAE8',
+  inkSoft: '#A4AAAE',
+  line: '#72797D',
+  lineSoft: '#4A5056',
+  blue: '#82AEDB',
+  rust: '#E39275',
+  green: '#7EC093',
+};
+
+function toneOf(p: Palette): Record<ToneId, string> {
+  return { ink: p.ink, accent1: p.blue, accent2: p.rust, accent3: p.green, ok: p.green, ng: p.rust, warn: p.rust, muted: p.line };
+}
+
 const ALL_KINDS = Object.keys(NODE_GLYPHS) as NodeKind[];
-const fill: Partial<Record<NodeKind, string>> = Object.fromEntries(ALL_KINDS.map((k) => [k, DISC]));
 
 const FONT = 'Zen Maru Gothic';
 
@@ -63,47 +89,54 @@ const EDGE_W = 2;
 const EDGE_W_ACTIVE = 3;
 const EDGE_LEADING = 1.3;
 
-export const plainTokens: SkinTokens = {
-  bg: PAPER,
-  bg2: BAND,
-  ink: INK,
-  inkSoft: INK_SOFT,
-  line: LINE,
-  lineSoft: LINE_SOFT,
-  tone,
-  fill,
-  payloadTone: {
-    text: 'ink', query: 'accent2', vector: 'accent1', chunks: 'accent1', prompt: 'accent2', answer: 'ok',
-    image: 'accent1', graph: 'accent1', score: 'warn', plan: 'accent2', tokens: 'accent1', compressed: 'ink', generic: 'ink',
-  },
-  font: {
-    title: { family: FONT, size: 36, weight: 700 },
-    subtitle: { family: FONT, size: 17, weight: 500 },
-    label: { family: FONT, size: 17, weight: 700 },
-    sublabel: { family: FONT, size: 13, weight: 500 },
-    edge: { family: FONT, size: 14, weight: 700 },
-    badge: { family: FONT, size: 15, weight: 700 },
-    caption: { family: FONT, size: 24, weight: 500 },
-    particle: { family: FONT, size: 13, weight: 700 },
-    lane: { family: FONT, size: 15, weight: 700 },
-    citation: { family: FONT, size: 12, weight: 500 },
-  },
-  stroke: { node: 0, edge: EDGE_W, lane: 0, group: 2, icon: 2 },
-  radius: { node: DISC_R, lane: 18, corner: 16 },
-  arrow: { kind: 'triangle-small', size: ARROW },
-  particle: { size: PARTICLE_R * 2, labelGap: 5 },
-  grid: { colWidth: 246, rowHeight: 194, laneGap: 44, padding: 48, laneHeader: 26 },
-  nodeMin: { sm: { w: NODE_W, h: NODE_H }, md: { w: NODE_W, h: NODE_H }, lg: { w: NODE_W, h: NODE_H } },
-  nodePad: 4,
-  // レイアウトの高さ計算に使うだけ。実際の丸の直径は DISC_R * 2
-  iconSize: 52,
-  stub: 12,
-  track: 12,
-  texture: 'none',
-  dark: false,
-  showSublabel: false,
-  disc: DISC_R,
-};
+function tokensOf(p: Palette, dark: boolean): SkinTokens {
+  return {
+    bg: p.paper,
+    bg2: p.band,
+    ink: p.ink,
+    inkSoft: p.inkSoft,
+    line: p.line,
+    lineSoft: p.lineSoft,
+    tone: toneOf(p),
+    fill: Object.fromEntries(ALL_KINDS.map((k) => [k, p.disc])),
+    payloadTone: {
+      text: 'ink', query: 'accent2', vector: 'accent1', chunks: 'accent1', prompt: 'accent2', answer: 'ok',
+      image: 'accent1', graph: 'accent1', score: 'warn', plan: 'accent2', tokens: 'accent1', compressed: 'ink', generic: 'ink',
+    },
+    font: {
+      title: { family: FONT, size: 36, weight: 700 },
+      subtitle: { family: FONT, size: 17, weight: 500 },
+      label: { family: FONT, size: 17, weight: 700 },
+      sublabel: { family: FONT, size: 13, weight: 500 },
+      edge: { family: FONT, size: 14, weight: 700 },
+      badge: { family: FONT, size: 15, weight: 700 },
+      caption: { family: FONT, size: 24, weight: 500 },
+      particle: { family: FONT, size: 13, weight: 700 },
+      lane: { family: FONT, size: 15, weight: 700 },
+      citation: { family: FONT, size: 12, weight: 500 },
+    },
+    stroke: { node: 0, edge: EDGE_W, lane: 0, group: 2, icon: 2 },
+    radius: { node: DISC_R, lane: 18, corner: 16 },
+    arrow: { kind: 'triangle-small', size: ARROW },
+    particle: { size: PARTICLE_R * 2, labelGap: 5 },
+    grid: { colWidth: 246, rowHeight: 194, laneGap: 44, padding: 48, laneHeader: 26 },
+    nodeMin: { sm: { w: NODE_W, h: NODE_H }, md: { w: NODE_W, h: NODE_H }, lg: { w: NODE_W, h: NODE_H } },
+    nodePad: 4,
+    // レイアウトの高さ計算に使うだけ。実際の丸の直径は DISC_R * 2
+    iconSize: 52,
+    stub: 12,
+    track: 12,
+    texture: 'none',
+    dark,
+    showSublabel: false,
+    disc: DISC_R,
+  };
+}
+
+/** 画面がダークのときは暗い版の色を使う */
+function paletteOf(ctx: RenderCtx): Palette {
+  return ctx.skin.tokens.dark ? DARK : LIGHT;
+}
 
 function glyphGroup(d: string[], cx: number, cy: number, size: number, color: string, width: number, key: string): ReactNode {
   const k = size / 24;
@@ -118,32 +151,35 @@ function Defs(): ReactNode {
   return null;
 }
 
-function Background(_ctx: RenderCtx, size: Size): ReactNode {
-  return <rect x={0} y={0} width={size.width} height={size.height} fill={PAPER} />;
+function Background(ctx: RenderCtx, size: Size): ReactNode {
+  const pal = paletteOf(ctx);
+  return <rect x={0} y={0} width={size.width} height={size.height} fill={pal.paper} />;
 }
 
 function Title(ctx: RenderCtx, rect: Rect, title: string, subtitle?: string): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const titleLines = wrapLines(title, rect.width, ctx.measure, t.font.title).slice(0, 2);
   const titleH = textHeight(titleLines.length, t.font.title, 1.2);
   const subLines = subtitle ? wrapLines(subtitle, rect.width, ctx.measure, t.font.subtitle).slice(0, 2) : [];
   return (
     <g>
-      {Text({ x: rect.x, y: rect.y, lines: titleLines, font: t.font.title, fill: INK, leading: 1.2 })}
-      {subLines.length > 0 && Text({ x: rect.x, y: rect.y + titleH + 12, lines: subLines, font: t.font.subtitle, fill: INK_SOFT, leading: 1.45 })}
+      {Text({ x: rect.x, y: rect.y, lines: titleLines, font: t.font.title, fill: pal.ink, leading: 1.2 })}
+      {subLines.length > 0 && Text({ x: rect.x, y: rect.y + titleH + 12, lines: subLines, font: t.font.subtitle, fill: pal.inkSoft, leading: 1.45 })}
     </g>
   );
 }
 
 function LaneBand(ctx: RenderCtx, lane: Lane, rect: Rect): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const frame = lane.frame ?? 'band';
   const parts: ReactNode[] = [];
   if (frame === 'band') {
-    parts.push(<rect key="band" x={rect.x} y={rect.y} width={rect.width} height={rect.height} rx={t.radius.lane} fill={BAND} />);
+    parts.push(<rect key="band" x={rect.x} y={rect.y} width={rect.width} height={rect.height} rx={t.radius.lane} fill={pal.band} />);
   } else if (frame === 'outline') {
     parts.push(
-      <rect key="outline" x={rect.x} y={rect.y} width={rect.width} height={rect.height} rx={t.radius.lane} fill="none" stroke={LINE_SOFT} strokeWidth={2} strokeDasharray="6 6" />,
+      <rect key="outline" x={rect.x} y={rect.y} width={rect.width} height={rect.height} rx={t.radius.lane} fill="none" stroke={pal.lineSoft} strokeWidth={2} strokeDasharray="6 6" />,
     );
   }
   if (lane.label) {
@@ -152,8 +188,8 @@ function LaneBand(ctx: RenderCtx, lane: Lane, rect: Rect): ReactNode {
     const y = rect.y + 12;
     parts.push(
       <g key="label">
-        <circle cx={x + 4} cy={y + f.size * 0.52} r={4.5} fill={lane.tone ? t.tone[lane.tone] : LINE} />
-        {Text({ x: x + 16, y, lines: [lane.label], font: f, fill: INK_SOFT })}
+        <circle cx={x + 4} cy={y + f.size * 0.52} r={4.5} fill={lane.tone ? t.tone[lane.tone] : pal.line} />
+        {Text({ x: x + 16, y, lines: [lane.label], font: f, fill: pal.inkSoft })}
       </g>,
     );
   }
@@ -161,8 +197,9 @@ function LaneBand(ctx: RenderCtx, lane: Lane, rect: Rect): ReactNode {
 }
 
 function Group(ctx: RenderCtx, group: DiagramGroup, rect: Rect): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
-  const color = group.tone ? t.tone[group.tone] : LINE;
+  const color = group.tone ? t.tone[group.tone] : pal.line;
   const f = t.font.sublabel;
   return (
     <g>
@@ -180,6 +217,7 @@ function fitLabel(font: FontFace, lines: number, room: number): FontFace {
 }
 
 function Node(ctx: RenderCtx, node: DiagramNode, box: NodeBox, state: NodeState): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const port = node.kind === 'port';
   const muted = node.emphasis === 'muted' && !port;
@@ -196,42 +234,42 @@ function Node(ctx: RenderCtx, node: DiagramNode, box: NodeBox, state: NodeState)
   if (port) {
     // 外の図との境目。部品ではなく端子に見えるよう、中を抜いた破線の丸にする
     parts.push(
-      <circle key="disc" cx={cx} cy={cy} r={DISC_R} fill={PAPER} stroke={active ? INK : LINE} strokeWidth={2} strokeDasharray="5 4" />,
-      glyphGroup(glyph, cx, cy, GLYPH - 4, active ? INK : INK_SOFT, t.stroke.icon, 'icon'),
+      <circle key="disc" cx={cx} cy={cy} r={DISC_R} fill={pal.paper} stroke={active ? pal.ink : pal.line} strokeWidth={2} strokeDasharray="5 4" />,
+      glyphGroup(glyph, cx, cy, GLYPH - 4, active ? pal.ink : pal.inkSoft, t.stroke.icon, 'icon'),
     );
   } else {
-    const face = active ? INK : muted ? DISC_MUTED : DISC;
-    const iconColor = active ? PAPER : muted ? INK_SOFT : INK;
+    const face = active ? pal.ink : muted ? pal.discMuted : pal.disc;
+    const iconColor = active ? pal.paper : muted ? pal.inkSoft : pal.ink;
     parts.push(
       <circle key="disc" cx={cx} cy={cy} r={DISC_R} fill={face} />,
       glyphGroup(glyph, cx, cy, GLYPH, iconColor, t.stroke.icon, 'icon'),
     );
   }
   if (isNew) {
-    parts.push(<circle key="new" cx={cx} cy={cy} r={DISC_R + RING_GAP} fill="none" stroke={RUST} strokeWidth={2.5} />);
+    parts.push(<circle key="new" cx={cx} cy={cy} r={DISC_R + RING_GAP} fill="none" stroke={pal.rust} strokeWidth={2.5} />);
   }
   if (state.phase === 'processing') {
-    parts.push(progressArc(cx, cy, DISC_R + RING_GAP, state.progress ?? 0, !isNew));
+    parts.push(progressArc(pal, cx, cy, DISC_R + RING_GAP, state.progress ?? 0, !isNew));
   }
 
   return (
     <g>
       <g transform={`translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`}>{parts}</g>
-      {Text({ x: cx, y: labelTop, lines: box.labelLines, font, fill: muted || port ? INK_SOFT : INK, anchor: 'middle', leading: LABEL_LEADING })}
+      {Text({ x: cx, y: labelTop, lines: box.labelLines, font, fill: muted || port ? pal.inkSoft : pal.ink, anchor: 'middle', leading: LABEL_LEADING })}
     </g>
   );
 }
 
 /** track が false なら下地の輪を描かない（足された要素の錆色の輪が下地になる） */
-function progressArc(cx: number, cy: number, r: number, p: number, track: boolean): ReactNode {
+function progressArc(pal: Palette, cx: number, cy: number, r: number, p: number, track: boolean): ReactNode {
   const a = Math.max(0.001, Math.min(0.999, p)) * Math.PI * 2;
   const x = cx + r * Math.sin(a);
   const y = cy - r * Math.cos(a);
   const large = a > Math.PI ? 1 : 0;
   return (
     <g key="progress">
-      {track && <circle cx={cx} cy={cy} r={r} fill="none" stroke={LINE_SOFT} strokeWidth={2.5} />}
-      <path d={`M${cx} ${cy - r} A${r} ${r} 0 ${large} 1 ${x} ${y}`} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" />
+      {track && <circle cx={cx} cy={cy} r={r} fill="none" stroke={pal.lineSoft} strokeWidth={2.5} />}
+      <path d={`M${cx} ${cy - r} A${r} ${r} 0 ${large} 1 ${x} ${y}`} fill="none" stroke={pal.ink} strokeWidth={3} strokeLinecap="round" />
     </g>
   );
 }
@@ -274,13 +312,14 @@ function arrowHead(key: string, at: Pt, dir: Dir, color: string, size: number): 
 }
 
 function Edge(ctx: RenderCtx, edge: DiagramEdge, geom: EdgeGeom, phase: Phase): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const pts = geom.points;
   if (pts.length < 2) return null;
   const role = edge.role ?? 'main';
   const active = phase === 'active';
   const toned = edge.tone ? t.tone[edge.tone] : undefined;
-  const color = toned ?? (active ? INK : LINE);
+  const color = toned ?? (active ? pal.ink : pal.line);
   const width = active ? EDGE_W_ACTIVE : EDGE_W;
   const dash = role === 'loop' || role === 'ref' || edge.line === 'dashed' ? '7 6' : edge.line === 'dotted' ? '0.5 6' : undefined;
   const size = active ? ARROW + 1 : ARROW;
@@ -316,24 +355,25 @@ function Edge(ctx: RenderCtx, edge: DiagramEdge, geom: EdgeGeom, phase: Phase): 
     const ty = b.y + (b.height - th) / 2;
     parts.push(
       <g key="label">
-        <rect x={b.x - 5} y={ty - 4} width={b.width + 10} height={th + 8} rx={6} fill={PAPER} />
-        {Text({ x: tx, y: ty, lines: geom.label.lines, font: f, fill: toned ?? (active ? INK : INK_SOFT), anchor, leading: EDGE_LEADING })}
+        <rect x={b.x - 5} y={ty - 4} width={b.width + 10} height={th + 8} rx={6} fill={pal.paper} />
+        {Text({ x: tx, y: ty, lines: geom.label.lines, font: f, fill: toned ?? (active ? pal.ink : pal.inkSoft), anchor, leading: EDGE_LEADING })}
       </g>,
     );
   }
   return <g>{parts}</g>;
 }
 
-function dot(key: string, x: number, y: number, r: number, color: string, ghost: boolean | undefined): ReactNode {
+function dot(pal: Palette, key: string, x: number, y: number, r: number, color: string, ghost: boolean | undefined): ReactNode {
   return ghost
-    ? <circle key={key} cx={x} cy={y} r={r} fill={PAPER} stroke={color} strokeWidth={2} strokeDasharray="3 2.5" />
-    : <circle key={key} cx={x} cy={y} r={r} fill={color} stroke={PAPER} strokeWidth={2} />;
+    ? <circle key={key} cx={x} cy={y} r={r} fill={pal.paper} stroke={color} strokeWidth={2} strokeDasharray="3 2.5" />
+    : <circle key={key} cx={x} cy={y} r={r} fill={color} stroke={pal.paper} strokeWidth={2} />;
 }
 
 /** 文書 3 件以上は小さな点を 3 つ寄せて描く */
 const CLUSTER: Array<[number, number]> = [[-5.5, 3.5], [5.5, 3.5], [0, -5.5]];
 
 function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
 
   let scale = 1;
@@ -367,11 +407,11 @@ function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
   return (
     <g transform={`translate(${num(x)} ${num(y)}) scale(${scale.toFixed(3)})`}>
       {stacked
-        ? CLUSTER.map(([cx, cy], i) => dot(`c${i}`, cx, cy, 5.5, color, shown.ghost))
-        : dot('c', 0, 0, PARTICLE_R, color, shown.ghost)}
+        ? CLUSTER.map(([cx, cy], i) => dot(pal, `c${i}`, cx, cy, 5.5, color, shown.ghost))
+        : dot(pal, 'c', 0, 0, PARTICLE_R, color, shown.ghost)}
       {label && scale > 0.6 && (
         <g transform={`scale(${(1 / scale).toFixed(3)})`}>
-          <rect x={-labelW / 2 - 4} y={labelY - 2} width={labelW + 8} height={f.size + 5} rx={5} fill={PAPER} />
+          <rect x={-labelW / 2 - 4} y={labelY - 2} width={labelW + 8} height={f.size + 5} rx={5} fill={pal.paper} />
           {Text({ x: 0, y: labelY, lines: [label], font: f, fill: color, anchor: 'middle' })}
         </g>
       )}
@@ -379,10 +419,10 @@ function Particle(ctx: RenderCtx, pf: ParticleFrame): ReactNode {
   );
 }
 
-function badgeDisc(n: number, r: number, phase: Phase, font: FontFace): ReactNode {
-  const face = phase === 'active' ? INK : PAPER;
-  const ring = phase === 'pending' ? LINE_SOFT : INK;
-  const digit = phase === 'active' ? PAPER : phase === 'pending' ? INK_SOFT : INK;
+function badgeDisc(pal: Palette, n: number, r: number, phase: Phase, font: FontFace): ReactNode {
+  const face = phase === 'active' ? pal.ink : pal.paper;
+  const ring = phase === 'pending' ? pal.lineSoft : pal.ink;
+  const digit = phase === 'active' ? pal.paper : phase === 'pending' ? pal.inkSoft : pal.ink;
   return (
     <>
       <circle r={r} fill={face} stroke={ring} strokeWidth={2} />
@@ -397,10 +437,12 @@ function badgeDisc(n: number, r: number, phase: Phase, font: FontFace): ReactNod
  * 同じ文は字幕の帯と手順の一覧に出る。
  */
 function Badge(ctx: RenderCtx, n: number, pos: Pt, phase: Phase): ReactNode {
-  return <g transform={`translate(${num(pos.x)} ${num(pos.y)})`}>{badgeDisc(n, BADGE_R, phase, ctx.skin.tokens.font.badge)}</g>;
+  const pal = paletteOf(ctx);
+  return <g transform={`translate(${num(pos.x)} ${num(pos.y)})`}>{badgeDisc(pal, n, BADGE_R, phase, ctx.skin.tokens.font.badge)}</g>;
 }
 
 function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active: number): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const f = t.font.caption;
   if (active < 0 || !steps[active]) return captionIndex(ctx, rect, steps);
@@ -409,9 +451,9 @@ function CaptionStrip(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], active:
   const lines = wrapLines(st.caption, rect.width - indent, ctx.measure, f).slice(0, 3);
   return (
     <g>
-      <g transform={`translate(${rect.x + BADGE_R} ${rect.y + f.size * 0.55})`}>{badgeDisc(st.n, BADGE_R, 'active', t.font.badge)}</g>
-      {Text({ x: rect.x + indent, y: rect.y, lines, font: f, fill: INK, leading: 1.45 })}
-      {Text({ x: rect.x + rect.width, y: rect.y + rect.height - t.font.citation.size, lines: [`${st.n} / ${steps.length}`], font: t.font.citation, fill: INK_SOFT, anchor: 'end' })}
+      <g transform={`translate(${rect.x + BADGE_R} ${rect.y + f.size * 0.55})`}>{badgeDisc(pal, st.n, BADGE_R, 'active', t.font.badge)}</g>
+      {Text({ x: rect.x + indent, y: rect.y, lines, font: f, fill: pal.ink, leading: 1.45 })}
+      {Text({ x: rect.x + rect.width, y: rect.y + rect.height - t.font.citation.size, lines: [`${st.n} / ${steps.length}`], font: t.font.citation, fill: pal.inkSoft, anchor: 'end' })}
     </g>
   );
 }
@@ -448,6 +490,7 @@ function planIndex(ctx: RenderCtx, rect: Rect, steps: CompiledStep[], indent: nu
 
 /** 静止表示の番号付き一覧。図の中と同じ番号の丸を頭に付ける。 */
 function captionIndex(ctx: RenderCtx, rect: Rect, steps: CompiledStep[]): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   const r = 10;
   const indent = r * 2 + 10;
@@ -463,8 +506,8 @@ function captionIndex(ctx: RenderCtx, rect: Rect, steps: CompiledStep[]): ReactN
       const lines = plan.lines[c * per + i];
       items.push(
         <g key={s.index}>
-          <g transform={`translate(${x + r} ${y + body.size * 0.55})`}>{badgeDisc(s.n, r, 'done', digit)}</g>
-          {Text({ x: x + indent, y, lines, font: body, fill: INK, leading: INDEX_LEADING })}
+          <g transform={`translate(${x + r} ${y + body.size * 0.55})`}>{badgeDisc(pal, s.n, r, 'done', digit)}</g>
+          {Text({ x: x + indent, y, lines, font: body, fill: pal.ink, leading: INDEX_LEADING })}
         </g>,
       );
       y += textHeight(lines.length, body, INDEX_LEADING) + body.size * 0.45;
@@ -474,11 +517,12 @@ function captionIndex(ctx: RenderCtx, rect: Rect, steps: CompiledStep[]): ReactN
 }
 
 function Citation(ctx: RenderCtx, rect: Rect, sources: Source[]): ReactNode {
+  const pal = paletteOf(ctx);
   const t = ctx.skin.tokens;
   if (sources.length === 0) return null;
   const text = '出典: ' + sources.map(formatSource).join(' ／ ');
   const lines = wrapLines(text, rect.width, ctx.measure, t.font.citation).slice(0, 2);
-  return Text({ x: rect.x, y: rect.y, lines, font: t.font.citation, fill: INK_SOFT, leading: 1.45 });
+  return Text({ x: rect.x, y: rect.y, lines, font: t.font.citation, fill: pal.inkSoft, leading: 1.45 });
 }
 
 /** 「ひらく」の印は丸の右下に寄せた小さな三角、輪は丸を囲む破線の円にする（箱の角だと丸から遠い）。 */
@@ -493,11 +537,7 @@ function OpenMark(ctx: RenderCtx, box: NodeBox): { mark: ReactNode; ring: ReactN
   };
 }
 
-export const plainSkin: Skin = {
-  id: 'plain',
-  name: '略図',
-  tokens: plainTokens,
-  fonts: [{ family: FONT, googleId: 'Zen+Maru+Gothic', weights: [500, 700] }],
+const drawing = {
   Defs,
   Background,
   Title,
@@ -511,3 +551,10 @@ export const plainSkin: Skin = {
   Citation,
   OpenMark,
 };
+
+const fonts = [{ family: FONT, googleId: 'Zen+Maru+Gothic', weights: [500, 700] }];
+
+export const plainSkin: Skin = { id: 'plain', name: '略図', tokens: tokensOf(LIGHT, false), fonts, ...drawing };
+
+/** 画面をダークにしたときの略図。形と寸法は明るい版と同じで、色だけが違う */
+export const plainDarkSkin: Skin = { id: 'plain-dark', name: '略図', tokens: tokensOf(DARK, true), fonts, ...drawing };
